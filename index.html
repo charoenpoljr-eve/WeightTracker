@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Weight Tracker — Wawa &amp; Eve</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f5f4f0; --surface: #ffffff; --surface2: #f0eeea; --surface3: #e8e5df;
+  --border: rgba(0,0,0,0.08); --border2: rgba(0,0,0,0.14);
+  --text: #1a1a18; --text2: #5a5850; --text3: #9a9890;
+  --accent: #5a9e20; --accent-dim: rgba(90,158,32,0.10); --accent-dark: #3d7010;
+  --accent-bright: #6dbe28;
+  --red: #d94f4f; --red-dim: rgba(217,79,79,0.10);
+  --amber: #c97d10; --amber-dim: rgba(201,125,16,0.10);
+  --wawa: #e8507a; --wawa-dim: rgba(232,80,122,0.10);
+  --eve: #5a9e20; --eve-dim: rgba(90,158,32,0.10);
+  --radius: 16px; --radius-sm: 10px; --radius-xs: 6px;
+}
+body { font-family: 'Outfit','Noto Sans Thai',sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+body::before { content:''; position:fixed; inset:0; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E"); pointer-events:none; z-index:1000; opacity:0.2; }
+header { padding:1.5rem 2rem; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); position:sticky; top:0; background:rgba(245,244,240,0.90); backdrop-filter:blur(16px); z-index:100; }
+.header-left { display:flex; align-items:baseline; gap:14px; }
+.header-logo { font-family:'Space Mono',monospace; font-size:0.75rem; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:var(--accent); background:var(--accent-dim); border:1px solid rgba(200,240,96,0.2); padding:4px 10px; border-radius:var(--radius-xs); }
+header h1 { font-size:1.05rem; font-weight:500; color:var(--text2); letter-spacing:-0.01em; }
+.header-goal { font-family:'Space Mono',monospace; font-size:0.7rem; color:var(--text3); letter-spacing:0.05em; }
+.nav-tabs { display:flex; padding:0 2rem; border-bottom:1px solid var(--border); background:var(--surface); overflow-x:auto; scrollbar-width:none; }
+.nav-tabs::-webkit-scrollbar { display:none; }
+.nav-tab { padding:1rem 1.25rem; font-size:0.8125rem; font-weight:500; color:var(--text3); cursor:pointer; border:none; border-bottom:2px solid transparent; background:none; font-family:inherit; letter-spacing:0.02em; white-space:nowrap; transition:color 0.2s,border-color 0.2s; }
+.nav-tab:hover { color:var(--text2); }
+.nav-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+.tab-page { display:none; }
+.tab-page.active { display:block; animation:fadeUp 0.3s ease; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.container { max-width:820px; margin:0 auto; padding:2rem 1.5rem; }
+.stats-grid { display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:10px; margin-bottom:1.5rem; }
+@media (max-width:600px) { .stats-grid { grid-template-columns:1fr 1fr; } }
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.25rem; position:relative; overflow:hidden; }
+.stat-card::after { content:''; position:absolute; inset:0; border-radius:var(--radius); box-shadow:inset 0 1px 0 rgba(255,255,255,0.05); pointer-events:none; }
+.stat-card.primary { background:var(--accent-dim); border-color:rgba(200,240,96,0.2); }
+.stat-card .label { font-size:0.6875rem; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px; }
+.stat-card.primary .label { color:var(--accent-dark); }
+.stat-card .value { font-family:'Space Mono',monospace; font-size:2rem; font-weight:700; letter-spacing:-0.04em; line-height:1; }
+.stat-card.primary .value { color:var(--accent); }
+.stat-card .unit { font-family:'Outfit',sans-serif; font-size:0.875rem; font-weight:400; color:var(--text3); margin-left:2px; }
+.card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.5rem; margin-bottom:1rem; position:relative; overflow:hidden; }
+.card::after { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.06),transparent); }
+.card-title { font-size:0.6875rem; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:1.25rem; }
+.card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; }
+.card-header .card-title { margin-bottom:0; }
+.input-row { display:flex; align-items:center; gap:12px; margin-bottom:1rem; flex-wrap:wrap; }
+.input-row label { font-size:0.8125rem; color:var(--text2); min-width:56px; font-weight:500; }
+input[type="range"] { flex:1; min-width:120px; accent-color:var(--accent); cursor:pointer; }
+input[type="number"],input[type="date"],textarea,select { background:var(--surface2); border:1px solid var(--border2); border-radius:var(--radius-sm); padding:9px 13px; font-family:inherit; font-size:0.9375rem; color:var(--text); outline:none; transition:border-color 0.15s,background 0.15s; }
+input[type="number"]:focus,input[type="date"]:focus,textarea:focus,select:focus { border-color:var(--accent); background:var(--surface3); }
+input[type="number"] { width:80px; text-align:center; font-family:'Space Mono',monospace; font-size:1rem; }
+input[type="date"] { width:160px; }
+textarea { width:100%; resize:vertical; min-height:64px; }
+.progress-wrap { margin-bottom:1.25rem; }
+.progress-meta { display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text3); margin-bottom:8px; font-weight:500; }
+.progress-meta span:last-child { font-family:'Space Mono',monospace; color:var(--accent); }
+.progress-bar-bg { height:6px; background:var(--surface3); border-radius:99px; overflow:hidden; }
+.progress-bar-fill { height:100%; background:linear-gradient(90deg,var(--accent-dark),var(--accent)); border-radius:99px; transition:width 0.6s cubic-bezier(0.34,1.56,0.64,1); }
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; background:var(--accent); color:#0f0f0d; border:none; border-radius:var(--radius-sm); padding:11px 22px; font-family:inherit; font-size:0.9375rem; font-weight:600; cursor:pointer; width:100%; transition:background 0.15s,transform 0.1s,box-shadow 0.15s; letter-spacing:-0.01em; }
+.btn:hover { background:#d4f570; box-shadow:0 0 24px rgba(200,240,96,0.25); }
+.btn:active { transform:scale(0.98); }
+.btn-icon { display:inline-flex; align-items:center; justify-content:center; background:var(--surface2); border:1px solid var(--border2); border-radius:var(--radius-xs); padding:6px 14px; font-family:inherit; font-size:0.8125rem; font-weight:600; color:var(--accent); cursor:pointer; transition:background 0.15s,border-color 0.15s; white-space:nowrap; }
+.btn-icon:hover { background:var(--surface3); border-color:var(--accent); }
+.btn-icon:active { transform:scale(0.97); }
+.btn-sm { background:transparent; color:var(--text3); border:1px solid var(--border); border-radius:var(--radius-xs); padding:4px 10px; font-size:0.75rem; font-family:inherit; cursor:pointer; transition:border-color 0.15s,color 0.15s; }
+.btn-sm:hover { border-color:var(--red); color:var(--red); }
+.chart-wrap { position:relative; width:100%; height:220px; }
+.log-table { width:100%; border-collapse:collapse; font-size:0.875rem; }
+.log-table th { text-align:left; padding:8px 12px; font-size:0.6875rem; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:0.08em; border-bottom:1px solid var(--border); }
+.log-table td { padding:11px 12px; border-bottom:1px solid var(--border); color:var(--text); vertical-align:middle; }
+.log-table td:nth-child(2) { font-family:'Space Mono',monospace; }
+.log-table tr:last-child td { border-bottom:none; }
+.log-table tr:hover td { background:var(--surface2); }
+.badge { display:inline-block; font-size:0.6875rem; padding:3px 8px; border-radius:99px; font-weight:600; font-family:'Space Mono',monospace; }
+.badge-green { background:var(--accent-dim); color:var(--accent); border:1px solid rgba(200,240,96,0.2); }
+.badge-amber { background:var(--amber-dim); color:var(--amber); border:1px solid rgba(240,184,96,0.2); }
+.badge-red { background:var(--red-dim); color:var(--red); border:1px solid rgba(240,112,112,0.2); }
+.badge-blue { background:rgba(96,160,240,0.12); color:#60a0f0; border:1px solid rgba(96,160,240,0.2); }
+.empty-state { text-align:center; padding:3rem 1rem; color:var(--text3); font-size:0.875rem; }
+.empty-state-icon { font-size:2.5rem; margin-bottom:12px; opacity:0.4; }
+.tip-box { background:var(--accent-dim); border:1px solid rgba(200,240,96,0.15); border-radius:var(--radius-sm); padding:0.875rem 1rem; font-size:0.8125rem; color:var(--accent); margin-top:1rem; display:none; line-height:1.6; }
+.tip-box.visible { display:block; animation:fadeUp 0.3s ease; }
+
+/* FOOD TAB */
+.food-filter { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:1.25rem; }
+.filter-btn { background:var(--surface2); border:1px solid var(--border); border-radius:99px; padding:5px 14px; font-size:0.75rem; font-weight:600; color:var(--text2); cursor:pointer; font-family:inherit; transition:all 0.15s; letter-spacing:0.03em; }
+.filter-btn:hover { border-color:var(--border2); color:var(--text); }
+.filter-btn.active { background:var(--accent-dim); border-color:rgba(200,240,96,0.3); color:var(--accent); }
+.food-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:8px; }
+.food-item { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:1rem 0.75rem; text-align:center; transition:border-color 0.2s,background 0.2s; cursor:default; }
+.food-item:hover { border-color:var(--border2); background:var(--surface3); }
+.food-item .food-icon { font-size:1.625rem; display:block; margin-bottom:6px; }
+.food-item .food-name { font-size:0.8125rem; font-weight:500; color:var(--text); line-height:1.3; }
+.food-item .food-note { font-family:'Space Mono',monospace; font-size:0.6875rem; color:var(--text3); margin-top:5px; }
+.food-item .food-cat { font-size:0.625rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; margin-top:5px; }
+
+.meal-plan-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:8px; }
+.meal-card { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:1rem; }
+.meal-card .meal-time { font-size:0.6875rem; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px; }
+.meal-card .meal-name { font-size:0.875rem; font-weight:500; color:var(--text); margin-bottom:8px; line-height:1.4; }
+.meal-card .meal-kcal { font-family:'Space Mono',monospace; font-size:0.75rem; color:var(--accent); }
+
+.avoid-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+@media (max-width:480px) { .avoid-grid { grid-template-columns:1fr; } }
+.avoid-card { border-radius:var(--radius-sm); padding:1rem; }
+.avoid-card.danger { background:var(--red-dim); border:1px solid rgba(240,112,112,0.15); }
+.avoid-card.warning { background:var(--amber-dim); border:1px solid rgba(240,184,96,0.15); }
+.avoid-card .avoid-title { font-weight:700; font-size:0.875rem; margin-bottom:8px; }
+.avoid-card.danger .avoid-title { color:var(--red); }
+.avoid-card.warning .avoid-title { color:var(--amber); }
+.avoid-card .avoid-list { font-size:0.8125rem; color:var(--text2); line-height:2.1; }
+
+/* EXERCISE TAB */
+.ex-filter { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:1.25rem; }
+.week-plan { display:grid; grid-template-columns:1fr; gap:8px; margin-bottom:1rem; }
+.week-slot { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:1rem 1.25rem; display:flex; align-items:center; gap:16px; }
+.week-slot .slot-day { font-family:'Space Mono',monospace; font-size:0.6875rem; font-weight:700; color:var(--accent); background:var(--accent-dim); border:1px solid rgba(200,240,96,0.15); border-radius:var(--radius-xs); padding:4px 10px; white-space:nowrap; min-width:60px; text-align:center; }
+.week-slot .slot-rest { color:var(--text3); font-size:0.875rem; font-style:italic; }
+.week-slot .slot-info { flex:1; }
+.week-slot .slot-name { font-weight:600; font-size:0.9375rem; color:var(--text); }
+.week-slot .slot-detail { font-size:0.8125rem; color:var(--text2); margin-top:3px; line-height:1.5; }
+.week-slot .slot-kcal { font-family:'Space Mono',monospace; font-size:0.75rem; color:var(--accent); margin-top:4px; }
+.week-slot .slot-reroll { background:transparent; border:1px solid var(--border); border-radius:var(--radius-xs); padding:4px 10px; font-size:0.75rem; color:var(--text3); cursor:pointer; font-family:inherit; transition:all 0.15s; flex-shrink:0; }
+.week-slot .slot-reroll:hover { border-color:var(--accent); color:var(--accent); }
+
+.ex-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:8px; }
+.ex-item { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:1rem; transition:border-color 0.2s; }
+.ex-item:hover { border-color:var(--border2); }
+.ex-item .ex-icon { font-size:1.5rem; margin-bottom:6px; display:block; }
+.ex-item .ex-name { font-size:0.8125rem; font-weight:600; color:var(--text); margin-bottom:4px; }
+.ex-item .ex-detail { font-size:0.75rem; color:var(--text2); line-height:1.4; }
+.ex-item .ex-kcal { font-family:'Space Mono',monospace; font-size:0.6875rem; color:var(--accent); margin-top:5px; display:inline-block; }
+.ex-item .ex-level { font-size:0.625rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; margin-top:4px; display:block; }
+
+.tips-list { display:flex; flex-direction:column; gap:12px; }
+.tip-item { display:flex; gap:12px; align-items:flex-start; }
+.tip-dot { width:6px; height:6px; border-radius:50%; background:var(--accent); margin-top:8px; flex-shrink:0; }
+.tip-text { font-size:0.9rem; color:var(--text2); line-height:1.6; }
+.tip-text strong { color:var(--text); font-weight:600; }
+
+footer { text-align:center; padding:2.5rem; font-size:0.6875rem; color:var(--text3); letter-spacing:0.06em; font-family:'Space Mono',monospace; border-top:1px solid var(--border); margin-top:2rem; }
+@media (max-width:480px) { header { padding:1rem; } .header-goal { display:none; } .nav-tabs { padding:0 1rem; } .container { padding:1rem; } .stats-grid { grid-template-columns:1fr 1fr; } .stat-card .value { font-size:1.5rem; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <span class="header-logo">WT</span>
+    <h1>Wawa &amp; Eve</h1>
+  </div>
+  <span class="header-goal">Weight Tracker 🌿</span>
+</header>
+
+<nav class="nav-tabs">
+  <button class="nav-tab active" onclick="switchTab('tracker',this)">บันทึก</button>
+  <button class="nav-tab" onclick="switchTab('food',this)">อาหาร</button>
+  <button class="nav-tab" onclick="switchTab('exercise',this)">ออกกำลังกาย</button>
+</nav>
+
+<!-- TAB 1: TRACKER -->
+<div id="tab-tracker" class="tab-page active">
+<div class="container">
+  <!-- Stats for both people -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.25rem;">
+    <!-- Wawa -->
+    <div style="background:var(--wawa-dim);border:1.5px solid var(--wawa);border-radius:var(--radius);padding:1.25rem;">
+      <div style="font-size:0.6875rem;font-weight:700;color:var(--wawa);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">🌸 Wawa</div>
+      <div style="font-family:'Space Mono',monospace;font-size:1.75rem;font-weight:700;color:var(--wawa);letter-spacing:-0.04em;line-height:1;" id="stat-wawa-cur">— <span style="font-size:0.875rem;font-weight:400;color:var(--text3)">กก.</span></div>
+      <div style="font-size:0.75rem;color:var(--text3);margin-top:6px;">ลดไป <span id="stat-wawa-lost" style="color:var(--wawa);font-weight:600;">0.0</span> กก. · เหลือ <span id="stat-wawa-left" style="font-weight:600;">—</span> กก.</div>
+      <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:0.6875rem;color:var(--text3);">BMI</span>
+        <span id="stat-wawa-bmi" style="font-family:'Space Mono',monospace;font-size:0.9375rem;font-weight:700;color:var(--wawa);">—</span>
+        <span id="stat-wawa-bmi-label" style="font-size:0.6875rem;padding:2px 8px;border-radius:99px;font-weight:600;"></span>
+      </div>
+    </div>
+    <!-- Eve -->
+    <div style="background:var(--eve-dim);border:1.5px solid var(--eve);border-radius:var(--radius);padding:1.25rem;">
+      <div style="font-size:0.6875rem;font-weight:700;color:var(--eve);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">🌿 Eve</div>
+      <div style="font-family:'Space Mono',monospace;font-size:1.75rem;font-weight:700;color:var(--eve);letter-spacing:-0.04em;line-height:1;" id="stat-eve-cur">— <span style="font-size:0.875rem;font-weight:400;color:var(--text3)">กก.</span></div>
+      <div style="font-size:0.75rem;color:var(--text3);margin-top:6px;">ลดไป <span id="stat-eve-lost" style="color:var(--eve);font-weight:600;">0.0</span> กก. · เหลือ <span id="stat-eve-left" style="font-weight:600;">—</span> กก.</div>
+      <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:0.6875rem;color:var(--text3);">BMI</span>
+        <span id="stat-eve-bmi" style="font-family:'Space Mono',monospace;font-size:0.9375rem;font-weight:700;color:var(--eve);">—</span>
+        <span id="stat-eve-bmi-label" style="font-size:0.6875rem;padding:2px 8px;border-radius:99px;font-weight:600;"></span>
+      </div>
+    </div>
+  </div>
+  <!-- Person Selector -->
+  <div style="display:flex;gap:10px;margin-bottom:1.25rem;">
+    <button id="btn-wawa" onclick="selectPerson('wawa')" style="flex:1;padding:14px;border-radius:var(--radius);border:2px solid var(--wawa);background:var(--wawa-dim);color:var(--wawa);font-family:inherit;font-size:1rem;font-weight:700;cursor:pointer;transition:all 0.2s;">
+      🌸 Wawa
+    </button>
+    <button id="btn-eve" onclick="selectPerson('eve')" style="flex:1;padding:14px;border-radius:var(--radius);border:2px solid var(--border);background:var(--surface);color:var(--text3);font-family:inherit;font-size:1rem;font-weight:700;cursor:pointer;transition:all 0.2s;">
+      🌿 Eve
+    </button>
+  </div>
+
+  <div class="card" id="entry-card">
+    <div class="card-title" id="entry-card-title">บันทึกน้ำหนัก — 🌸 Wawa</div>
+    <div class="input-row">
+      <label>วันที่</label>
+      <input type="date" id="entry-date" />
+    </div>
+    <div class="input-row">
+      <label>น้ำหนัก</label>
+      <input type="range" min="30" max="90" step="0.1" value="50" id="weight-slider" oninput="syncWeight('slider')" />
+      <input type="number" id="weight-num" value="50" min="30" max="90" step="0.1" oninput="syncWeight('num')" />
+      <span style="font-size:0.8125rem;color:var(--text3)">กก.</span>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-meta"><span>ความคืบหน้า</span><span id="pct-label">0%</span></div>
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="prog-fill" style="width:0%"></div></div>
+    </div>
+    <div class="input-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
+      <label>บันทึกเพิ่มเติม</label>
+      <textarea id="entry-note" placeholder="เช่น ออกกำลังกาย 30 นาที, ทานอาหารครบ 3 มื้อ..."></textarea>
+    </div>
+    <button class="btn" id="btn-add" onclick="addEntry()">บันทึกน้ำหนัก</button>
+    <div class="tip-box" id="tip-box"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">กราฟน้ำหนัก — Wawa &amp; Eve</div>
+    <div class="chart-wrap"><canvas id="weightChart"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title" id="log-title">ประวัติการบันทึก — 🌸 Wawa</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <button class="btn-icon" onclick="openSheetSettings()" title="ตั้งค่า Google Sheets">⚙ Sheet</button>
+        <button class="btn-icon" id="btn-push" onclick="pushToSheet()" title="ส่งข้อมูลไป Sheet">↑ ซิงค์ขึ้น</button>
+        <button class="btn-icon" id="btn-pull" onclick="pullFromSheet()" title="โหลดข้อมูลจาก Sheet">↓ โหลดจาก Sheet</button>
+      </div>
+    </div>
+    <!-- Sheet Settings Panel -->
+    <div id="sheet-settings" style="display:none;margin-bottom:1rem;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:1rem;">
+      <div style="font-size:0.75rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">ตั้งค่า Google Apps Script URL</div>
+      <div style="font-size:0.8125rem;color:var(--text2);margin-bottom:0.75rem;line-height:1.6;">
+        วาง Web App URL จาก Google Apps Script ที่ deploy แล้ว<br>
+        <span style="color:var(--text3);font-size:0.75rem;">(ดูวิธีติดตั้ง Apps Script ได้ในไฟล์ <code style="background:var(--surface3);padding:1px 5px;border-radius:3px;">apps-script.gs</code>)</span>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input type="text" id="sheet-url-input" placeholder="https://script.google.com/macros/s/…/exec"
+          style="flex:1;min-width:200px;background:var(--surface3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:9px 13px;font-family:inherit;font-size:0.875rem;color:var(--text);outline:none;" />
+        <button class="btn-icon" onclick="saveSheetUrl()">บันทึก URL</button>
+      </div>
+      <div id="sheet-url-status" style="font-size:0.75rem;margin-top:8px;"></div>
+    </div>
+    <!-- Sync Status -->
+    <div id="sync-status" style="display:none;margin-bottom:0.75rem;font-size:0.8125rem;padding:8px 12px;border-radius:var(--radius-xs);"></div>
+    <div id="log-container">
+      <div class="empty-state"><div class="empty-state-icon">○</div>ยังไม่มีข้อมูล — เริ่มบันทึกน้ำหนักวันแรกได้เลย</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- TAB 2: FOOD -->
+<div id="tab-food" class="tab-page">
+<div class="container">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">แผนอาหารวันนี้ (สุ่มใหม่ได้)</div>
+      <button class="btn-icon" onclick="randomMealPlan()">⟳ สุ่มเมนู</button>
+    </div>
+    <div class="meal-plan-grid" id="meal-plan-grid"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">คลังเมนู 100+ รายการ</div>
+      <span style="font-family:'Space Mono',monospace;font-size:0.7rem;color:var(--text3)" id="food-count"></span>
+    </div>
+    <div class="food-filter" id="food-filter"></div>
+    <div class="food-grid" id="food-grid"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">อาหารที่ควรหลีกเลี่ยง</div>
+    <div class="avoid-grid">
+      <div class="avoid-card danger">
+        <div class="avoid-title">เลี่ยงเลย</div>
+        <div class="avoid-list">น้ำอัดลม · น้ำหวาน<br>ขนมกรุบกรอบ · ฟาสต์ฟู้ด<br>ของทอด · ขนมหวานจัด</div>
+      </div>
+      <div class="avoid-card warning">
+        <div class="avoid-title">ลดปริมาณ</div>
+        <div class="avoid-list">ข้าวขาว · ขนมปัง<br>แอลกอฮอล์ · น้ำผลไม้กล่อง<br>ซอสและเครื่องปรุงเยอะ</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- TAB 3: EXERCISE -->
+<div id="tab-exercise" class="tab-page">
+<div class="container">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">แผนออกกำลังกายสัปดาห์นี้</div>
+      <button class="btn-icon" onclick="randomWeekPlan()">⟳ สุ่มใหม่ทั้งสัปดาห์</button>
+    </div>
+    <div class="week-plan" id="week-plan"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">คลังกิจกรรม 100+ รายการ</div>
+      <span style="font-family:'Space Mono',monospace;font-size:0.7rem;color:var(--text3)" id="ex-count"></span>
+    </div>
+    <div class="ex-filter" id="ex-filter"></div>
+    <div class="ex-grid" id="ex-grid"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">เคล็ดลับสำคัญ</div>
+    <div class="tips-list">
+      <div class="tip-item"><div class="tip-dot"></div><div class="tip-text"><strong>ขาดดุล 500 kcal/วัน</strong> = ลดได้ราว 0.5 กก./สัปดาห์ อัตราที่ปลอดภัยและยั่งยืน</div></div>
+      <div class="tip-item"><div class="tip-dot"></div><div class="tip-text"><strong>ดื่มน้ำก่อนออกกำลังกาย</strong> 30 นาที และระหว่างออกกำลังกายทุก 15–20 นาที</div></div>
+      <div class="tip-item"><div class="tip-dot"></div><div class="tip-text"><strong>ออกกำลังกายตอนเช้า</strong> ก่อนอาหาร จะช่วยเผาผลาญไขมันได้มากขึ้น</div></div>
+      <div class="tip-item"><div class="tip-dot"></div><div class="tip-text"><strong>นอน 7–8 ชั่วโมง</strong> ร่างกายจะหลั่ง Growth Hormone ช่วยเผาผลาญไขมันขณะพัก</div></div>
+      <div class="tip-item"><div class="tip-dot"></div><div class="tip-text"><strong>อย่าข้ามมื้อเช้า</strong> ช่วยคุมน้ำตาลในเลือด ลดการกินเยอะในมื้อถัดไป</div></div>
+      <div class="tip-item"><div class="tip-dot"></div><div class="tip-text"><strong>Cheat meal ได้ 1 ครั้ง/สัปดาห์</strong> ช่วยให้ metabolism ไม่ชะลอตัว และจิตใจไม่เครียด</div></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<footer>ข้อมูลเก็บใน localStorage · Eve Weight Tracker</footer>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────────────
+
+const FOODS = [
+  // โปรตีน
+  {icon:'🐟',name:'ปลาทูนึ่ง',note:'~150 kcal/100g',cat:'โปรตีน'},
+  {icon:'🍗',name:'อกไก่ต้ม',note:'~165 kcal/100g',cat:'โปรตีน'},
+  {icon:'🥚',name:'ไข่ต้ม',note:'~77 kcal/ฟอง',cat:'โปรตีน'},
+  {icon:'🫘',name:'เต้าหู้แข็ง',note:'~80 kcal/100g',cat:'โปรตีน'},
+  {icon:'🦐',name:'กุ้งต้ม',note:'~99 kcal/100g',cat:'โปรตีน'},
+  {icon:'🥛',name:'นมไขมันต่ำ',note:'~60 kcal/แก้ว',cat:'โปรตีน'},
+  {icon:'🐮',name:'เนื้อวัวไขมันต่ำ',note:'~180 kcal/100g',cat:'โปรตีน'},
+  {icon:'🐷',name:'เนื้อหมูสันใน',note:'~145 kcal/100g',cat:'โปรตีน'},
+  {icon:'🦑',name:'ปลาหมึกนึ่ง',note:'~92 kcal/100g',cat:'โปรตีน'},
+  {icon:'🐟',name:'ปลาแซลมอน',note:'~208 kcal/100g',cat:'โปรตีน'},
+  {icon:'🥩',name:'ไก่ย่างไม่ติดหนัง',note:'~185 kcal/100g',cat:'โปรตีน'},
+  {icon:'🐟',name:'ปลากะพงนึ่ง',note:'~105 kcal/100g',cat:'โปรตีน'},
+  {icon:'🫙',name:'กรีกโยเกิร์ต',note:'~59 kcal/100g',cat:'โปรตีน'},
+  {icon:'🥜',name:'ถั่วเหลืองต้ม',note:'~147 kcal/100g',cat:'โปรตีน'},
+  {icon:'🐟',name:'ปลาทูน่ากระป๋อง',note:'~116 kcal/100g',cat:'โปรตีน'},
+  {icon:'🦆',name:'เป็ดย่างไม่ติดหนัง',note:'~201 kcal/100g',cat:'โปรตีน'},
+  {icon:'🥚',name:'ไข่ดาวน้ำมันน้อย',note:'~90 kcal/ฟอง',cat:'โปรตีน'},
+  {icon:'🐟',name:'ปลาช่อนต้ม',note:'~113 kcal/100g',cat:'โปรตีน'},
+  {icon:'🦞',name:'กุ้งมังกรต้ม',note:'~112 kcal/100g',cat:'โปรตีน'},
+  {icon:'🥛',name:'ชีสไขมันต่ำ',note:'~98 kcal/แผ่น',cat:'โปรตีน'},
+  // ผักผลไม้
+  {icon:'🥦',name:'บร็อคโคลี',note:'~34 kcal/100g',cat:'ผัก'},
+  {icon:'🥬',name:'ผักบุ้ง',note:'~20 kcal/100g',cat:'ผัก'},
+  {icon:'🍅',name:'มะเขือเทศ',note:'~18 kcal/100g',cat:'ผัก'},
+  {icon:'🫑',name:'พริกหวาน',note:'~31 kcal/100g',cat:'ผัก'},
+  {icon:'🥒',name:'แตงกวา',note:'~16 kcal/100g',cat:'ผัก'},
+  {icon:'🧅',name:'หอมใหญ่',note:'~40 kcal/100g',cat:'ผัก'},
+  {icon:'🥕',name:'แครอท',note:'~41 kcal/100g',cat:'ผัก'},
+  {icon:'🌽',name:'ข้าวโพดต้ม',note:'~86 kcal/ฝัก',cat:'ผัก'},
+  {icon:'🥗',name:'ผักกาดหอม',note:'~15 kcal/100g',cat:'ผัก'},
+  {icon:'🧄',name:'กระเทียม',note:'~149 kcal/100g',cat:'ผัก'},
+  {icon:'🍆',name:'มะเขือยาว',note:'~25 kcal/100g',cat:'ผัก'},
+  {icon:'🌿',name:'คะน้าผัด',note:'~28 kcal/100g',cat:'ผัก'},
+  {icon:'🥑',name:'อะโวคาโด',note:'~160 kcal/100g',cat:'ผัก'},
+  {icon:'🍄',name:'เห็ดหอม',note:'~34 kcal/100g',cat:'ผัก'},
+  {icon:'🫛',name:'ถั่วฝักยาว',note:'~31 kcal/100g',cat:'ผัก'},
+  {icon:'🍎',name:'แอปเปิล',note:'~52 kcal/100g',cat:'ผลไม้'},
+  {icon:'🍓',name:'สตรอว์เบอร์รี',note:'~32 kcal/100g',cat:'ผลไม้'},
+  {icon:'🍊',name:'ส้ม',note:'~47 kcal/100g',cat:'ผลไม้'},
+  {icon:'🍋',name:'มะนาว',note:'~29 kcal/100g',cat:'ผลไม้'},
+  {icon:'🍇',name:'องุ่น',note:'~67 kcal/100g',cat:'ผลไม้'},
+  {icon:'🍉',name:'แตงโม',note:'~30 kcal/100g',cat:'ผลไม้'},
+  {icon:'🍌',name:'กล้วยหอม',note:'~89 kcal/ลูก',cat:'ผลไม้'},
+  {icon:'🥭',name:'มะม่วงสุก',note:'~60 kcal/100g',cat:'ผลไม้'},
+  {icon:'🍍',name:'สับปะรด',note:'~50 kcal/100g',cat:'ผลไม้'},
+  {icon:'🫐',name:'บลูเบอร์รี',note:'~57 kcal/100g',cat:'ผลไม้'},
+  // คาร์บ
+  {icon:'🍠',name:'มันหวานอบ',note:'~86 kcal/100g',cat:'คาร์บ'},
+  {icon:'🌾',name:'ข้าวกล้อง',note:'~111 kcal/100g',cat:'คาร์บ'},
+  {icon:'🌿',name:'ข้าวโอ๊ต',note:'~68 kcal/100g',cat:'คาร์บ'},
+  {icon:'🫘',name:'ถั่วลันเตา',note:'~81 kcal/100g',cat:'คาร์บ'},
+  {icon:'🍞',name:'ขนมปังโฮลวีต',note:'~247 kcal/100g',cat:'คาร์บ'},
+  {icon:'🍝',name:'พาสต้าโฮลวีต',note:'~131 kcal/100g',cat:'คาร์บ'},
+  {icon:'🥣',name:'ซีเรียลไม่หวาน',note:'~370 kcal/100g',cat:'คาร์บ'},
+  {icon:'🌰',name:'ข้าวบาร์เลย์',note:'~123 kcal/100g',cat:'คาร์บ'},
+  {icon:'🍚',name:'ข้าวไรซ์เบอร์รี',note:'~105 kcal/100g',cat:'คาร์บ'},
+  {icon:'🥔',name:'มันฝรั่งต้ม',note:'~77 kcal/100g',cat:'คาร์บ'},
+  // เมนูอาหารไทย/จานหลัก
+  {icon:'🍲',name:'ต้มจืดเต้าหู้',note:'~80 kcal/ถ้วย',cat:'จานหลัก'},
+  {icon:'🍛',name:'ข้าวกล้องผัดผัก',note:'~320 kcal/จาน',cat:'จานหลัก'},
+  {icon:'🍜',name:'ก๋วยเตี๋ยวต้มยำ',note:'~250 kcal/ชาม',cat:'จานหลัก'},
+  {icon:'🥘',name:'แกงส้มผักรวม',note:'~120 kcal/ถ้วย',cat:'จานหลัก'},
+  {icon:'🍱',name:'ข้าวกล้อง+อกไก่',note:'~380 kcal/กล่อง',cat:'จานหลัก'},
+  {icon:'🥗',name:'สลัดทูน่า',note:'~180 kcal/จาน',cat:'จานหลัก'},
+  {icon:'🍲',name:'ต้มข่าไก่ใส่ผัก',note:'~160 kcal/ถ้วย',cat:'จานหลัก'},
+  {icon:'🍛',name:'ข้าวหมูย่างกับผัก',note:'~420 kcal/จาน',cat:'จานหลัก'},
+  {icon:'🥣',name:'โจ๊กไก่ใส่ผัก',note:'~200 kcal/ชาม',cat:'จานหลัก'},
+  {icon:'🍜',name:'วุ้นเส้นผัดผัก',note:'~180 kcal/จาน',cat:'จานหลัก'},
+  {icon:'🥗',name:'ยำปลาทูน่า',note:'~150 kcal/จาน',cat:'จานหลัก'},
+  {icon:'🍲',name:'แกงจืดผักหมู',note:'~130 kcal/ถ้วย',cat:'จานหลัก'},
+  {icon:'🍛',name:'ข้าวผัดกะเพราไก่ไข่ดาว',note:'~480 kcal/จาน',cat:'จานหลัก'},
+  {icon:'🍜',name:'เส้นหมี่ผัดน้ำมันน้อย',note:'~220 kcal/จาน',cat:'จานหลัก'},
+  {icon:'🥘',name:'ผัดคะน้าหมูกรอบ(น้ำมันน้อย)',note:'~260 kcal/จาน',cat:'จานหลัก'},
+  // ของว่าง
+  {icon:'🥜',name:'อัลมอนด์',note:'~170 kcal/30g',cat:'ของว่าง'},
+  {icon:'🧀',name:'คอทเทจชีส',note:'~98 kcal/100g',cat:'ของว่าง'},
+  {icon:'🍌',name:'กล้วยกับนัท',note:'~150 kcal',cat:'ของว่าง'},
+  {icon:'🫙',name:'โยเกิร์ตไม่หวาน',note:'~59 kcal/100g',cat:'ของว่าง'},
+  {icon:'🥕',name:'แครอทจิ้มฮัมมัส',note:'~100 kcal',cat:'ของว่าง'},
+  {icon:'🍎',name:'แอปเปิลกับพีนัทบัตเตอร์',note:'~200 kcal',cat:'ของว่าง'},
+  {icon:'🌰',name:'วอลนัท',note:'~185 kcal/30g',cat:'ของว่าง'},
+  {icon:'🫐',name:'บลูเบอร์รี+โยเกิร์ต',note:'~120 kcal',cat:'ของว่าง'},
+  {icon:'🥚',name:'ไข่ต้มกับเกลือ',note:'~80 kcal',cat:'ของว่าง'},
+  {icon:'🍫',name:'ดาร์กช็อกโกแลต 70%',note:'~170 kcal/30g',cat:'ของว่าง'},
+  // เครื่องดื่ม
+  {icon:'🍵',name:'ชาเขียวไม่หวาน',note:'~2 kcal/แก้ว',cat:'เครื่องดื่ม'},
+  {icon:'☕',name:'กาแฟดำ',note:'~5 kcal/แก้ว',cat:'เครื่องดื่ม'},
+  {icon:'🥤',name:'น้ำเลมอน',note:'~10 kcal/แก้ว',cat:'เครื่องดื่ม'},
+  {icon:'🧃',name:'น้ำมะพร้าว',note:'~45 kcal/แก้ว',cat:'เครื่องดื่ม'},
+  {icon:'🥛',name:'นมอัลมอนด์',note:'~30 kcal/แก้ว',cat:'เครื่องดื่ม'},
+  {icon:'🍵',name:'ชาอูหลง',note:'~3 kcal/แก้ว',cat:'เครื่องดื่ม'},
+  {icon:'🧉',name:'มาตชาลาเต้นมไขมันต่ำ',note:'~70 kcal/แก้ว',cat:'เครื่องดื่ม'},
+  {icon:'🥤',name:'น้ำขิงอุ่น',note:'~8 kcal/แก้ว',cat:'เครื่องดื่ม'},
+  {icon:'🫖',name:'ชาดำไม่หวาน',note:'~2 kcal/แก้ว',cat:'เครื่องดื่ม'},
+  {icon:'🥛',name:'โปรตีนเชค',note:'~120 kcal/แก้ว',cat:'เครื่องดื่ม'},
+];
+
+const EXERCISES = [
+  // Cardio
+  {icon:'🚶',name:'เดินเร็ว',detail:'30 นาที ระดับปานกลาง',kcal:'~150 kcal',level:'เริ่มต้น',cat:'Cardio'},
+  {icon:'🏃',name:'วิ่งเหยาะๆ',detail:'30 นาที เหนื่อยพอดี',kcal:'~300 kcal',level:'เริ่มต้น',cat:'Cardio'},
+  {icon:'🚴',name:'ปั่นจักรยาน',detail:'30 นาที ความเร็วปานกลาง',kcal:'~250 kcal',level:'เริ่มต้น',cat:'Cardio'},
+  {icon:'🏊',name:'ว่ายน้ำ',detail:'30 นาที แบบ freestyle',kcal:'~280 kcal',level:'ปานกลาง',cat:'Cardio'},
+  {icon:'💃',name:'Zumba',detail:'45 นาที ตามคลิป',kcal:'~330 kcal',level:'เริ่มต้น',cat:'Cardio'},
+  {icon:'🎵',name:'เต้น Aerobic',detail:'40 นาที',kcal:'~300 kcal',level:'เริ่มต้น',cat:'Cardio'},
+  {icon:'⛹️',name:'กระโดดเชือก',detail:'20 นาที',kcal:'~220 kcal',level:'เริ่มต้น',cat:'Cardio'},
+  {icon:'🚣',name:'พายเรือ',detail:'30 นาที',kcal:'~260 kcal',level:'ปานกลาง',cat:'Cardio'},
+  {icon:'⛸️',name:'สเก็ต',detail:'30 นาที',kcal:'~240 kcal',level:'ปานกลาง',cat:'Cardio'},
+  {icon:'🏸',name:'แบดมินตัน',detail:'40 นาที',kcal:'~270 kcal',level:'เริ่มต้น',cat:'Cardio'},
+  {icon:'🎾',name:'เทนนิส',detail:'45 นาที',kcal:'~300 kcal',level:'ปานกลาง',cat:'Cardio'},
+  {icon:'⚽',name:'ฟุตบอล',detail:'45 นาที',kcal:'~350 kcal',level:'ปานกลาง',cat:'Cardio'},
+  {icon:'🏀',name:'บาสเกตบอล',detail:'30 นาที',kcal:'~280 kcal',level:'ปานกลาง',cat:'Cardio'},
+  {icon:'🏐',name:'วอลเลย์บอล',detail:'45 นาที',kcal:'~250 kcal',level:'เริ่มต้น',cat:'Cardio'},
+  {icon:'🚵',name:'ปั่นจักรยานเสือภูเขา',detail:'45 นาที',kcal:'~400 kcal',level:'หนัก',cat:'Cardio'},
+  {icon:'🏃',name:'วิ่ง 5K',detail:'~30–35 นาที',kcal:'~350 kcal',level:'ปานกลาง',cat:'Cardio'},
+  {icon:'🏃',name:'วิ่ง 10K',detail:'~60–70 นาที',kcal:'~700 kcal',level:'หนัก',cat:'Cardio'},
+  {icon:'🌊',name:'ว่ายน้ำท่าผีเสื้อ',detail:'20 นาที',kcal:'~300 kcal',level:'หนัก',cat:'Cardio'},
+  {icon:'🚣',name:'กรรเชียง',detail:'30 นาที',kcal:'~240 kcal',level:'ปานกลาง',cat:'Cardio'},
+  {icon:'🎭',name:'เต้น Hip-hop',detail:'45 นาที',kcal:'~310 kcal',level:'ปานกลาง',cat:'Cardio'},
+  // HIIT
+  {icon:'⚡',name:'HIIT 20 นาที',detail:'30วิ on / 10วิ off',kcal:'~250 kcal',level:'หนัก',cat:'HIIT'},
+  {icon:'🔥',name:'Tabata',detail:'8 รอบ × 20/10 วิ',kcal:'~200 kcal',level:'หนัก',cat:'HIIT'},
+  {icon:'🏋️',name:'Circuit Training',detail:'5 ท่า × 3 รอบ',kcal:'~300 kcal',level:'หนัก',cat:'HIIT'},
+  {icon:'⚡',name:'Jump Squat HIIT',detail:'20 นาที',kcal:'~220 kcal',level:'หนัก',cat:'HIIT'},
+  {icon:'🔥',name:'Burpee Challenge',detail:'100 ครั้ง',kcal:'~180 kcal',level:'หนัก',cat:'HIIT'},
+  {icon:'🏃',name:'Sprint Interval',detail:'6 รอบ วิ่ง 200m',kcal:'~280 kcal',level:'หนัก',cat:'HIIT'},
+  {icon:'⚡',name:'Mountain Climber',detail:'3 เซต × 1 นาที',kcal:'~150 kcal',level:'ปานกลาง',cat:'HIIT'},
+  {icon:'🔥',name:'Box Jump',detail:'4 เซต × 12 ครั้ง',kcal:'~200 kcal',level:'หนัก',cat:'HIIT'},
+  {icon:'⚡',name:'Battle Rope',detail:'20 นาที',kcal:'~300 kcal',level:'หนัก',cat:'HIIT'},
+  {icon:'🏋️',name:'Kettlebell Swing',detail:'4 เซต × 20 ครั้ง',kcal:'~240 kcal',level:'ปานกลาง',cat:'HIIT'},
+  // Strength
+  {icon:'💪',name:'Squat',detail:'4 เซต × 15 ครั้ง',kcal:'~100 kcal',level:'เริ่มต้น',cat:'Strength'},
+  {icon:'💪',name:'Push-up',detail:'4 เซต × 12 ครั้ง',kcal:'~80 kcal',level:'เริ่มต้น',cat:'Strength'},
+  {icon:'🏋️',name:'Plank',detail:'4 เซต × 45 วิ',kcal:'~60 kcal',level:'เริ่มต้น',cat:'Strength'},
+  {icon:'💪',name:'Lunge',detail:'3 เซต × 12 ข้างละ',kcal:'~90 kcal',level:'เริ่มต้น',cat:'Strength'},
+  {icon:'🏋️',name:'Dumbbell Row',detail:'3 เซต × 12 ครั้ง',kcal:'~80 kcal',level:'ปานกลาง',cat:'Strength'},
+  {icon:'💪',name:'Glute Bridge',detail:'3 เซต × 20 ครั้ง',kcal:'~70 kcal',level:'เริ่มต้น',cat:'Strength'},
+  {icon:'🏋️',name:'Deadlift',detail:'4 เซต × 8 ครั้ง',kcal:'~120 kcal',level:'หนัก',cat:'Strength'},
+  {icon:'💪',name:'Pull-up',detail:'3 เซต max',kcal:'~100 kcal',level:'หนัก',cat:'Strength'},
+  {icon:'🏋️',name:'Bench Press',detail:'4 เซต × 10 ครั้ง',kcal:'~100 kcal',level:'ปานกลาง',cat:'Strength'},
+  {icon:'💪',name:'Shoulder Press',detail:'3 เซต × 12 ครั้ง',kcal:'~80 kcal',level:'ปานกลาง',cat:'Strength'},
+  {icon:'🏋️',name:'Leg Press',detail:'4 เซต × 15 ครั้ง',kcal:'~110 kcal',level:'ปานกลาง',cat:'Strength'},
+  {icon:'💪',name:'Bicep Curl',detail:'3 เซต × 15 ครั้ง',kcal:'~60 kcal',level:'เริ่มต้น',cat:'Strength'},
+  {icon:'🏋️',name:'Tricep Dip',detail:'3 เซต × 12 ครั้ง',kcal:'~70 kcal',level:'เริ่มต้น',cat:'Strength'},
+  {icon:'💪',name:'Side Plank',detail:'3 เซต × 30 วิ',kcal:'~50 kcal',level:'เริ่มต้น',cat:'Strength'},
+  {icon:'🏋️',name:'Romanian Deadlift',detail:'3 เซต × 10 ครั้ง',kcal:'~100 kcal',level:'ปานกลาง',cat:'Strength'},
+  {icon:'💪',name:'Wall Sit',detail:'3 เซต × 45 วิ',kcal:'~55 kcal',level:'เริ่มต้น',cat:'Strength'},
+  {icon:'🏋️',name:'Cable Row',detail:'3 เซต × 12 ครั้ง',kcal:'~80 kcal',level:'ปานกลาง',cat:'Strength'},
+  {icon:'💪',name:'Hip Thrust',detail:'4 เซต × 15 ครั้ง',kcal:'~90 kcal',level:'ปานกลาง',cat:'Strength'},
+  {icon:'🏋️',name:'Sumo Squat',detail:'3 เซต × 15 ครั้ง',kcal:'~95 kcal',level:'เริ่มต้น',cat:'Strength'},
+  {icon:'💪',name:'Arnold Press',detail:'3 เซต × 10 ครั้ง',kcal:'~75 kcal',level:'ปานกลาง',cat:'Strength'},
+  // Yoga & Stretch
+  {icon:'🧘',name:'โยคะ Vinyasa',detail:'45 นาที',kcal:'~180 kcal',level:'ปานกลาง',cat:'Yoga'},
+  {icon:'🧘',name:'โยคะ Yin',detail:'60 นาที ยืดกล้าม',kcal:'~100 kcal',level:'เริ่มต้น',cat:'Yoga'},
+  {icon:'🧘',name:'โยคะ Hatha',detail:'45 นาที',kcal:'~140 kcal',level:'เริ่มต้น',cat:'Yoga'},
+  {icon:'🧘',name:'Pilates',detail:'40 นาที',kcal:'~160 kcal',level:'ปานกลาง',cat:'Yoga'},
+  {icon:'🧘',name:'Stretching รวม',detail:'30 นาที',kcal:'~80 kcal',level:'เริ่มต้น',cat:'Yoga'},
+  {icon:'🧘',name:'โยคะ Power',detail:'50 นาที',kcal:'~220 kcal',level:'หนัก',cat:'Yoga'},
+  {icon:'🧘',name:'Foam Rolling',detail:'20 นาที',kcal:'~50 kcal',level:'เริ่มต้น',cat:'Yoga'},
+  {icon:'🧘',name:'Tai Chi',detail:'30 นาที',kcal:'~90 kcal',level:'เริ่มต้น',cat:'Yoga'},
+  {icon:'🧘',name:'โยคะ Ashtanga',detail:'60 นาที',kcal:'~280 kcal',level:'หนัก',cat:'Yoga'},
+  {icon:'🧘',name:'Body Scan Meditation',detail:'20 นาที ลดความเครียด',kcal:'~30 kcal',level:'เริ่มต้น',cat:'Yoga'},
+  // Sport
+  {icon:'🏓',name:'ปิงปอง',detail:'30 นาที',kcal:'~170 kcal',level:'เริ่มต้น',cat:'Sport'},
+  {icon:'🥊',name:'มวยไทย',detail:'45 นาที',kcal:'~400 kcal',level:'หนัก',cat:'Sport'},
+  {icon:'🤸',name:'แอโรบิกน้ำ',detail:'45 นาที',kcal:'~250 kcal',level:'เริ่มต้น',cat:'Sport'},
+  {icon:'🎿',name:'สกี',detail:'60 นาที',kcal:'~450 kcal',level:'ปานกลาง',cat:'Sport'},
+  {icon:'🏂',name:'สโนว์บอร์ด',detail:'60 นาที',kcal:'~420 kcal',level:'ปานกลาง',cat:'Sport'},
+  {icon:'🧗',name:'ปีนผา',detail:'45 นาที',kcal:'~380 kcal',level:'หนัก',cat:'Sport'},
+  {icon:'🏇',name:'ขี่ม้า',detail:'45 นาที',kcal:'~270 kcal',level:'ปานกลาง',cat:'Sport'},
+  {icon:'🎯',name:'โบว์ลิ่ง',detail:'1 ชั่วโมง',kcal:'~150 kcal',level:'เริ่มต้น',cat:'Sport'},
+  {icon:'🤿',name:'ดำน้ำ',detail:'30 นาที',kcal:'~200 kcal',level:'ปานกลาง',cat:'Sport'},
+  {icon:'⛳',name:'กอล์ฟ',detail:'9 หลุม (เดิน)',kcal:'~350 kcal',level:'เริ่มต้น',cat:'Sport'},
+  {icon:'🥋',name:'ยูโด/คาราเต้',detail:'45 นาที',kcal:'~350 kcal',level:'ปานกลาง',cat:'Sport'},
+  {icon:'🤸',name:'ยิมนาสติก',detail:'45 นาที',kcal:'~280 kcal',level:'หนัก',cat:'Sport'},
+  {icon:'🏑',name:'ฮอกกี้',detail:'45 นาที',kcal:'~360 kcal',level:'ปานกลาง',cat:'Sport'},
+  {icon:'🤾',name:'แฮนด์บอล',detail:'45 นาที',kcal:'~330 kcal',level:'ปานกลาง',cat:'Sport'},
+  {icon:'🏹',name:'ยิงธนู',detail:'45 นาที',kcal:'~140 kcal',level:'เริ่มต้น',cat:'Sport'},
+  // Daily Activity
+  {icon:'🧹',name:'ทำความสะอาดบ้าน',detail:'60 นาที',kcal:'~200 kcal',level:'เริ่มต้น',cat:'Daily'},
+  {icon:'🌿',name:'ทำสวน',detail:'45 นาที',kcal:'~170 kcal',level:'เริ่มต้น',cat:'Daily'},
+  {icon:'🚶',name:'เดินห้างสรรพสินค้า',detail:'60 นาที',kcal:'~180 kcal',level:'เริ่มต้น',cat:'Daily'},
+  {icon:'🚿',name:'ยืนทำงาน Standing Desk',detail:'4 ชั่วโมง',kcal:'~200 kcal',level:'เริ่มต้น',cat:'Daily'},
+  {icon:'🧺',name:'ซักผ้าด้วยมือ',detail:'30 นาที',kcal:'~120 kcal',level:'เริ่มต้น',cat:'Daily'},
+  {icon:'🚶',name:'ขึ้นบันได',detail:'30 นาที',kcal:'~200 kcal',level:'เริ่มต้น',cat:'Daily'},
+  {icon:'🎨',name:'เต้นในห้อง',detail:'20 นาที',kcal:'~120 kcal',level:'เริ่มต้น',cat:'Daily'},
+  {icon:'🧘',name:'ยืดเส้นยามเช้า',detail:'15 นาที',kcal:'~40 kcal',level:'เริ่มต้น',cat:'Daily'},
+  {icon:'🚶',name:'จอดรถไกลแล้วเดิน',detail:'15 นาที x2',kcal:'~80 kcal',level:'เริ่มต้น',cat:'Daily'},
+  {icon:'🎮',name:'Ring Fit / VR Fitness',detail:'30 นาที',kcal:'~200 kcal',level:'เริ่มต้น',cat:'Daily'},
+];
+
+const MEAL_TEMPLATES = {
+  เช้า: [
+    {name:'ข้าวโอ๊ต + กล้วย + ไข่ต้ม',kcal:350},
+    {name:'กรีกโยเกิร์ต + บลูเบอร์รี + กราโนล่า',kcal:300},
+    {name:'ขนมปังโฮลวีต + ไข่คน + สลัด',kcal:320},
+    {name:'โจ๊กไก่ใส่ขิง + ผักต้ม',kcal:220},
+    {name:'สมูทตี้โปรตีน + แอปเปิล',kcal:280},
+    {name:'ข้าวกล้องต้ม + ปลาทู + ผักต้ม',kcal:340},
+    {name:'ไข่ดาว 2 ฟอง + ผักกาดหอม + มะเขือเทศ',kcal:260},
+    {name:'ข้าวโอ๊ตชีส + ไข่ต้ม',kcal:310},
+  ],
+  กลางวัน: [
+    {name:'ข้าวกล้อง + อกไก่ผัดผัก',kcal:450},
+    {name:'สลัดทูน่า + ขนมปังโฮลวีต',kcal:380},
+    {name:'ก๋วยเตี๋ยวต้มยำไก่',kcal:350},
+    {name:'ข้าวหน้าปลาแซลมอน + ผัก',kcal:480},
+    {name:'ยำวุ้นเส้น + ข้าวกล้อง',kcal:360},
+    {name:'แกงส้มผักรวม + ข้าวกล้อง',kcal:400},
+    {name:'ข้าวกล้อง + กุ้งผัดผักรวม',kcal:420},
+    {name:'พาสต้าโฮลวีต + ซอสมะเขือเทศ + ไก่',kcal:460},
+  ],
+  ของว่าง: [
+    {name:'แอปเปิล + นมไขมันต่ำ',kcal:130},
+    {name:'อัลมอนด์ 30g',kcal:170},
+    {name:'โยเกิร์ต + ผลไม้รวม',kcal:150},
+    {name:'แครอท + ฮัมมัส',kcal:100},
+    {name:'กล้วยหอม 1 ลูก',kcal:89},
+    {name:'ดาร์กช็อกโกแลต + วอลนัท',kcal:180},
+    {name:'ข้าวโพดต้ม',kcal:86},
+    {name:'กรีกโยเกิร์ต + น้ำผึ้ง',kcal:130},
+  ],
+  เย็น: [
+    {name:'ต้มจืดเต้าหู้ + ปลานึ่ง + ผัก',kcal:380},
+    {name:'แกงจืดผักหมู + ข้าวกล้อง',kcal:360},
+    {name:'ผัดคะน้าไก่ + ข้าวกล้อง',kcal:400},
+    {name:'ต้มข่าไก่ + ข้าวกล้อง',kcal:380},
+    {name:'ปลานึ่งซีอิ๊ว + ผักต้ม + ข้าวกล้อง',kcal:350},
+    {name:'สลัดกรีก + อกไก่ย่าง',kcal:300},
+    {name:'ข้าวกล้อง + เต้าหู้ผัดผัก',kcal:340},
+    {name:'ซุปผักรวม + ขนมปังโฮลวีต',kcal:280},
+  ],
+};
+
+const DAYS = ['จันทร์','อังคาร','พุธ','พฤหัส','ศุกร์','เสาร์','อาทิตย์'];
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const PERSONS = {
+  wawa: { name: 'Wawa', icon: '🌸', start: 50, goal: 45, height: 162, color: '#e8507a', storageKey: 'weight_entries_wawa' },
+  eve:  { name: 'Eve',  icon: '🌿', start: 70, goal: 60, height: 167, color: '#5a9e20', storageKey: 'weight_entries_eve'  }
+};
+let currentPerson = 'wawa';
+let entries = JSON.parse(localStorage.getItem(PERSONS[currentPerson].storageKey) || '[]');
+let chart;
+let activeFoodCat = 'ทั้งหมด';
+let activeExCat = 'ทั้งหมด';
+
+const TIPS = [
+  'ดื่มน้ำให้ได้ 8 แก้วต่อวัน ช่วยเร่งเผาผลาญ',
+  'ลองลด carbs มื้อเย็น แทนด้วยผักและโปรตีน',
+  'เดิน 10,000 ก้าวต่อวัน เผาผลาญได้ราว 300–400 kcal',
+  'นอนหลับ 7–8 ชั่วโมง ฮอร์โมนสมดุล ลดน้ำหนักง่ายขึ้น',
+  'กินช้าๆ เคี้ยวให้ละเอียด อิ่มเร็วโดยกินน้อยลง',
+  'Strength training เพิ่มกล้ามเนื้อ เผาผลาญพลังงานได้มากขึ้น',
+  'ไขมันดีจากอะโวคาโด ถั่ว ปลาแซลมอน ช่วยอิ่มนานขึ้น',
+];
+
+// ─── UTILS ───────────────────────────────────────────────────────────────────
+function rand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function pick(arr, n) {
+  const a = [...arr]; const r = [];
+  for (let i = 0; i < Math.min(n, a.length); i++) {
+    const idx = Math.floor(Math.random() * a.length);
+    r.push(a.splice(idx, 1)[0]);
+  }
+  return r;
+}
+
+// ─── TABS ────────────────────────────────────────────────────────────────────
+function switchTab(id, el) {
+  document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  if (el) el.classList.add('active');
+}
+
+// ─── TRACKER ─────────────────────────────────────────────────────────────────
+function init() {
+  document.getElementById('entry-date').value = new Date().toISOString().slice(0, 10);
+  selectPerson('wawa');
+  buildFoodTab();
+  buildExerciseTab();
+}
+
+function selectPerson(person) {
+  currentPerson = person;
+  const p = PERSONS[person];
+  entries = JSON.parse(localStorage.getItem(p.storageKey) || '[]');
+
+  // Update selector buttons
+  const btnWawa = document.getElementById('btn-wawa');
+  const btnEve  = document.getElementById('btn-eve');
+  if (person === 'wawa') {
+    btnWawa.style.borderColor = 'var(--wawa)'; btnWawa.style.background = 'var(--wawa-dim)'; btnWawa.style.color = 'var(--wawa)';
+    btnEve.style.borderColor  = 'var(--border)'; btnEve.style.background  = 'var(--surface)'; btnEve.style.color  = 'var(--text3)';
+  } else {
+    btnEve.style.borderColor  = 'var(--eve)'; btnEve.style.background  = 'var(--eve-dim)'; btnEve.style.color  = 'var(--eve)';
+    btnWawa.style.borderColor = 'var(--border)'; btnWawa.style.background = 'var(--surface)'; btnWawa.style.color = 'var(--text3)';
+  }
+
+  // Update entry card accent
+  const card = document.getElementById('entry-card');
+  card.style.borderTop = '3px solid ' + p.color;
+  document.getElementById('entry-card-title').textContent = 'บันทึกน้ำหนัก — ' + p.icon + ' ' + p.name;
+  document.getElementById('btn-add').style.background = p.color;
+
+  // Update log title
+  document.getElementById('log-title').textContent = 'ประวัติการบันทึก — ' + p.icon + ' ' + p.name;
+
+  // Reset chart when switching (destroy old)
+  if (chart) { chart.destroy(); chart = null; }
+
+  renderAll();
+  renderBothStats();
+}
+
+function getBmiInfo(weight, heightCm) {
+  const h = heightCm / 100;
+  const bmi = weight / (h * h);
+  let label, bg, color;
+  if (bmi < 18.5)      { label='ผอมเกิน'; bg='rgba(96,160,240,0.15)'; color='#60a0f0'; }
+  else if (bmi < 23)   { label='ปกติ ✓';  bg='rgba(90,158,32,0.15)';  color='#5a9e20'; }
+  else if (bmi < 25)   { label='ท้วม';    bg='rgba(201,125,16,0.15)'; color='#c97d10'; }
+  else if (bmi < 30)   { label='อ้วน';    bg='rgba(217,79,79,0.15)';  color='#d94f4f'; }
+  else                  { label='อ้วนมาก'; bg='rgba(217,79,79,0.20)';  color='#c03030'; }
+  return { bmi: bmi.toFixed(1), label, bg, color };
+}
+
+function renderBothStats() {
+  Object.keys(PERSONS).forEach(key => {
+    const p = PERSONS[key];
+    const data = JSON.parse(localStorage.getItem(p.storageKey) || '[]');
+    const latest = data.length ? data[data.length - 1].weight : null;
+    const curEl   = document.getElementById('stat-' + key + '-cur');
+    const lostEl  = document.getElementById('stat-' + key + '-lost');
+    const leftEl  = document.getElementById('stat-' + key + '-left');
+    if (latest !== null) {
+      curEl.innerHTML = latest.toFixed(1) + ' <span style="font-size:0.875rem;font-weight:400;color:var(--text3)">กก.</span>';
+      lostEl.textContent = Math.max(0, p.start - latest).toFixed(1);
+      leftEl.textContent = Math.max(0, latest - p.goal).toFixed(1);
+      // BMI
+      const bmiInfo = getBmiInfo(latest, p.height);
+      const bmiEl = document.getElementById('stat-' + key + '-bmi');
+      const bmiLabelEl = document.getElementById('stat-' + key + '-bmi-label');
+      if (bmiEl) { bmiEl.textContent = bmiInfo.bmi; }
+      if (bmiLabelEl) { bmiLabelEl.textContent = bmiInfo.label; bmiLabelEl.style.background = bmiInfo.bg; bmiLabelEl.style.color = bmiInfo.color; }
+    } else {
+      curEl.innerHTML = p.start.toFixed(1) + ' <span style="font-size:0.875rem;font-weight:400;color:var(--text3)">กก.</span>';
+      lostEl.textContent = '0.0';
+      leftEl.textContent = (p.start - p.goal).toFixed(1);
+      const bmiInfo = getBmiInfo(p.start, p.height);
+      const bmiEl = document.getElementById('stat-' + key + '-bmi');
+      const bmiLabelEl = document.getElementById('stat-' + key + '-bmi-label');
+      if (bmiEl) { bmiEl.textContent = bmiInfo.bmi; }
+      if (bmiLabelEl) { bmiLabelEl.textContent = bmiInfo.label; bmiLabelEl.style.background = bmiInfo.bg; bmiLabelEl.style.color = bmiInfo.color; }
+    }
+  });
+}
+
+function syncWeight(src) {
+  let val;
+  if (src === 'slider') {
+    val = parseFloat(document.getElementById('weight-slider').value);
+    document.getElementById('weight-num').value = val.toFixed(1);
+  } else {
+    val = parseFloat(document.getElementById('weight-num').value);
+    if (isNaN(val)) return;
+    document.getElementById('weight-slider').value = val;
+  }
+  updateProgress(val);
+}
+
+function updateProgress(val) {
+  const p = PERSONS[currentPerson];
+  const lost = Math.max(0, p.start - val);
+  const pct = Math.min(100, Math.round((lost / (p.start - p.goal)) * 100));
+  document.getElementById('pct-label').textContent = pct + '%';
+  document.getElementById('prog-fill').style.width = pct + '%';
+}
+
+function addEntry() {
+  const date = document.getElementById('entry-date').value;
+  const weight = parseFloat(document.getElementById('weight-num').value);
+  const note = document.getElementById('entry-note').value.trim();
+  if (!date) { alert('กรุณาเลือกวันที่'); return; }
+  if (isNaN(weight) || weight < 30 || weight > 200) { alert('กรุณากรอกน้ำหนักให้ถูกต้อง'); return; }
+  const existing = entries.findIndex(e => e.date === date);
+  if (existing >= 0) {
+    if (!confirm('มีข้อมูลของวันนี้แล้ว ต้องการแทนที่ไหม?')) return;
+    entries[existing] = { date, weight, note };
+  } else {
+    entries.push({ date, weight, note });
+  }
+  entries.sort((a, b) => a.date.localeCompare(b.date));
+  localStorage.setItem(PERSONS[currentPerson].storageKey, JSON.stringify(entries)); renderBothStats();
+  document.getElementById('entry-note').value = '';
+  showTip();
+  renderAll();
+}
+
+function deleteEntry(date) {
+  if (!confirm('ลบรายการวันที่ ' + formatDate(date) + ' ใช่ไหม?')) return;
+  entries = entries.filter(e => e.date !== date);
+  localStorage.setItem(PERSONS[currentPerson].storageKey, JSON.stringify(entries)); renderBothStats();
+  renderAll();
+}
+
+function showTip() {
+  const tip = TIPS[Math.floor(Math.random() * TIPS.length)];
+  const el = document.getElementById('tip-box');
+  el.textContent = tip;
+  el.classList.add('visible');
+  setTimeout(() => el.classList.remove('visible'), 6000);
+}
+
+function formatDate(iso) {
+  return new Date(iso + 'T00:00:00').toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+}
+
+function getDelta(i) {
+  if (i === 0) return null;
+  return entries[i].weight - entries[i - 1].weight;
+}
+
+function renderStats() {
+  const p = PERSONS[currentPerson];
+  if (!entries.length) {
+    document.getElementById('weight-num').value = p.start.toFixed(1);
+    document.getElementById('weight-slider').value = p.start;
+    updateProgress(p.start);
+    return;
+  }
+  const latest = entries[entries.length - 1].weight;
+  updateProgress(latest);
+  document.getElementById('weight-slider').value = latest;
+  document.getElementById('weight-num').value = latest.toFixed(1);
+}
+
+function renderChart() {
+  const gridColor = 'rgba(0,0,0,0.06)';
+  const textColor = '#9a9890';
+  const wawaData = JSON.parse(localStorage.getItem(PERSONS.wawa.storageKey) || '[]');
+  const eveData  = JSON.parse(localStorage.getItem(PERSONS.eve.storageKey)  || '[]');
+
+  // Merge all dates for labels
+  const allDates = [...new Set([...wawaData.map(e=>e.date), ...eveData.map(e=>e.date)])].sort();
+  const labels = allDates.map(d => formatDate(d));
+  const wawaMap = {}; wawaData.forEach(e => wawaMap[e.date] = e.weight);
+  const eveMap  = {};  eveData.forEach(e => eveMap[e.date]  = e.weight);
+  const wawaVals = allDates.map(d => wawaMap[d] ?? null);
+  const eveVals  = allDates.map(d => eveMap[d]  ?? null);
+  const allWeights = [...wawaData, ...eveData].map(e => e.weight);
+  const yMin = allWeights.length ? Math.min(...allWeights) - 1 : 45;
+  const yMax = allWeights.length ? Math.max(...allWeights) + 1 : 75;
+
+  if (chart) {
+    chart.data.labels = labels;
+    chart.data.datasets[0].data = wawaVals;
+    chart.data.datasets[1].data = eveVals;
+    chart.options.scales.y.min = yMin;
+    chart.options.scales.y.max = yMax;
+    chart.update(); return;
+  }
+  chart = new Chart(document.getElementById('weightChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label:'🌸 Wawa', data:wawaVals, borderColor:'#e8507a', backgroundColor:'rgba(232,80,122,0.07)', borderWidth:2.5, tension:0.4, pointRadius:4, pointBackgroundColor:'#e8507a', pointBorderColor:'#fff', pointBorderWidth:2, fill:true, spanGaps:false },
+        { label:'🌿 Eve',  data:eveVals,  borderColor:'#5a9e20', backgroundColor:'rgba(90,158,32,0.07)',   borderWidth:2.5, tension:0.4, pointRadius:4, pointBackgroundColor:'#5a9e20', pointBorderColor:'#fff', pointBorderWidth:2, fill:true, spanGaps:false },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      scales: {
+        y: { min:yMin, max:yMax, ticks:{callback:v=>v+' กก.',color:textColor,font:{family:'Space Mono',size:10}}, grid:{color:gridColor} },
+        x: { ticks:{color:textColor,font:{family:'Outfit',size:11},maxTicksLimit:8,maxRotation:30}, grid:{color:gridColor} }
+      },
+      plugins: {
+        legend: { display:true, labels:{color:'#5a5850',font:{family:'Outfit',size:12},usePointStyle:true} },
+        tooltip: { backgroundColor:'#ffffff', borderColor:'rgba(0,0,0,0.1)', borderWidth:1, titleColor:'#1a1a18', bodyColor:'#5a5850', callbacks:{label:ctx=>ctx.dataset.label+': '+(ctx.parsed.y||0).toFixed(1)+' กก.'} }
+      }
+    }
+  });
+}
+
+function renderLog() {
+  const container = document.getElementById('log-container');
+  if (!entries.length) { container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">○</div>ยังไม่มีข้อมูล — เริ่มบันทึกน้ำหนักวันแรกได้เลย</div>'; return; }
+  const rows = entries.slice().reverse().map((e, i) => {
+    const origIdx = entries.length - 1 - i;
+    const delta = getDelta(origIdx);
+    let badge = '';
+    if (delta !== null) {
+      if (delta < 0) badge = `<span class="badge badge-green">▼ ${Math.abs(delta).toFixed(1)}</span>`;
+      else if (delta > 0) badge = `<span class="badge badge-red">▲ ${delta.toFixed(1)}</span>`;
+      else badge = `<span class="badge badge-amber">— 0.0</span>`;
+    }
+    return `<tr><td>${formatDate(e.date)}</td><td>${e.weight.toFixed(1)} กก.</td><td>${badge}</td><td style="color:var(--text3);font-size:0.8125rem;">${e.note||'—'}</td><td><button class="btn-sm" onclick="deleteEntry('${e.date}')">ลบ</button></td></tr>`;
+  }).join('');
+  container.innerHTML = `<table class="log-table"><thead><tr><th>วันที่</th><th>น้ำหนัก</th><th>เปลี่ยนแปลง</th><th>บันทึก</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function renderAll() { renderStats(); renderChart(); renderLog(); }
+
+// ─── FOOD TAB ─────────────────────────────────────────────────────────────────
+function buildFoodTab() {
+  randomMealPlan();
+  const cats = ['ทั้งหมด', ...new Set(FOODS.map(f => f.cat))];
+  const filterEl = document.getElementById('food-filter');
+  filterEl.innerHTML = cats.map(c =>
+    `<button class="filter-btn${c===activeFoodCat?' active':''}" onclick="filterFood('${c}',this)">${c}</button>`
+  ).join('');
+  renderFoodGrid();
+}
+
+function filterFood(cat, el) {
+  activeFoodCat = cat;
+  document.querySelectorAll('#food-filter .filter-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderFoodGrid();
+}
+
+function renderFoodGrid() {
+  const list = activeFoodCat === 'ทั้งหมด' ? FOODS : FOODS.filter(f => f.cat === activeFoodCat);
+  const catColors = { โปรตีน:'badge-green', ผัก:'badge-green', ผลไม้:'badge-amber', คาร์บ:'badge-amber', จานหลัก:'badge-blue', ของว่าง:'badge-red', เครื่องดื่ม:'badge-blue' };
+  document.getElementById('food-count').textContent = list.length + ' รายการ';
+  document.getElementById('food-grid').innerHTML = list.map(f =>
+    `<div class="food-item">
+      <span class="food-icon">${f.icon}</span>
+      <div class="food-name">${f.name}</div>
+      <div class="food-note">${f.note}</div>
+      <span class="badge ${catColors[f.cat]||'badge-green'} food-cat">${f.cat}</span>
+    </div>`
+  ).join('');
+}
+
+function randomMealPlan() {
+  const meals = Object.entries(MEAL_TEMPLATES).map(([time, options]) => {
+    const m = rand(options);
+    return `<div class="meal-card">
+      <div class="meal-time">${time}</div>
+      <div class="meal-name">${m.name}</div>
+      <div class="meal-kcal">~${m.kcal} kcal</div>
+    </div>`;
+  });
+  document.getElementById('meal-plan-grid').innerHTML = meals.join('');
+}
+
+// ─── EXERCISE TAB ─────────────────────────────────────────────────────────────
+function buildExerciseTab() {
+  randomWeekPlan();
+  const cats = ['ทั้งหมด', ...new Set(EXERCISES.map(e => e.cat))];
+  const filterEl = document.getElementById('ex-filter');
+  filterEl.innerHTML = cats.map(c =>
+    `<button class="filter-btn${c===activeExCat?' active':''}" onclick="filterEx('${c}',this)">${c}</button>`
+  ).join('');
+  renderExGrid();
+}
+
+function filterEx(cat, el) {
+  activeExCat = cat;
+  document.querySelectorAll('#ex-filter .filter-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderExGrid();
+}
+
+function renderExGrid() {
+  const list = activeExCat === 'ทั้งหมด' ? EXERCISES : EXERCISES.filter(e => e.cat === activeExCat);
+  const lvlColors = { 'เริ่มต้น':'badge-green', 'ปานกลาง':'badge-amber', 'หนัก':'badge-red' };
+  document.getElementById('ex-count').textContent = list.length + ' กิจกรรม';
+  document.getElementById('ex-grid').innerHTML = list.map(e =>
+    `<div class="ex-item">
+      <span class="ex-icon">${e.icon}</span>
+      <div class="ex-name">${e.name}</div>
+      <div class="ex-detail">${e.detail}</div>
+      <span class="badge ${lvlColors[e.level]||'badge-green'} ex-kcal">${e.kcal}</span>
+      <span class="badge ${lvlColors[e.level]||'badge-green'} ex-level">${e.level}</span>
+    </div>`
+  ).join('');
+}
+
+function randomWeekPlan() {
+  const cardio = EXERCISES.filter(e => e.cat === 'Cardio' || e.cat === 'Sport');
+  const strength = EXERCISES.filter(e => e.cat === 'Strength' || e.cat === 'HIIT');
+  const yoga = EXERCISES.filter(e => e.cat === 'Yoga' || e.cat === 'Daily');
+  const slots = [
+    { ex: rand(cardio) },
+    { ex: rand(strength) },
+    { ex: rand(yoga) },
+    { ex: rand(cardio) },
+    { ex: rand(strength) },
+    { ex: rand([...cardio, ...yoga]) },
+    { rest: true },
+  ];
+  document.getElementById('week-plan').innerHTML = DAYS.map((day, i) => {
+    const s = slots[i];
+    if (s.rest) return `<div class="week-slot">
+      <span class="slot-day">${day}</span>
+      <span class="slot-rest">พักผ่อน / เดินเบาๆ</span>
+    </div>`;
+    const e = s.ex;
+    return `<div class="week-slot">
+      <span class="slot-day">${day}</span>
+      <div class="slot-info">
+        <div class="slot-name">${e.icon} ${e.name}</div>
+        <div class="slot-detail">${e.detail}</div>
+        <div class="slot-kcal">${e.kcal}</div>
+      </div>
+      <button class="slot-reroll" onclick="rerollDay(${i})">⟳</button>
+    </div>`;
+  }).join('');
+}
+
+function rerollDay(i) {
+  const all = EXERCISES.filter(e => e.cat !== 'Daily');
+  const e = rand(all);
+  const day = DAYS[i];
+  const slot = document.getElementById('week-plan').children[i];
+  slot.innerHTML = `<span class="slot-day">${day}</span>
+    <div class="slot-info">
+      <div class="slot-name">${e.icon} ${e.name}</div>
+      <div class="slot-detail">${e.detail}</div>
+      <div class="slot-kcal">${e.kcal}</div>
+    </div>
+    <button class="slot-reroll" onclick="rerollDay(${i})">⟳</button>`;
+}
+
+
+
+// ─── GOOGLE SHEETS SYNC ──────────────────────────────────────────────────────
+
+var DEFAULT_SHEET_URL = 'https://script.google.com/macros/s/AKfycbyPkNSZ1hZdKo0vbQ7eb5VNheqOGci_qil5XERoJHt_EDBhl4AxH1jKXPB3Z4SoIbNK/exec';
+function getSheetUrl() {
+  return localStorage.getItem('sheet_url') || DEFAULT_SHEET_URL;
+}
+
+function saveSheetUrl() {
+  const url = document.getElementById('sheet-url-input').value.trim();
+  if (!url) { showSheetStatus('กรุณากรอก URL', 'error'); return; }
+  if (!url.startsWith('https://script.google.com/macros/s/')) {
+    showSheetStatus('URL ไม่ถูกต้อง — ต้องขึ้นต้นด้วย https://script.google.com/macros/s/', 'error'); return;
+  }
+  localStorage.setItem('sheet_url', url);
+  showSheetStatus('✓ บันทึก URL เรียบร้อย', 'ok');
+}
+
+function openSheetSettings() {
+  const panel = document.getElementById('sheet-settings');
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    const saved = getSheetUrl();
+    if (saved) document.getElementById('sheet-url-input').value = saved;
+  }
+}
+
+function showSheetStatus(msg, type) {
+  const el = document.getElementById('sheet-url-status');
+  el.textContent = msg;
+  el.style.color = type === 'error' ? 'var(--red)' : 'var(--accent)';
+}
+
+function showSyncStatus(msg, type) {
+  const el = document.getElementById('sync-status');
+  el.style.display = 'block';
+  el.textContent = msg;
+  if (type === 'loading') {
+    el.style.background = 'var(--surface3)'; el.style.color = 'var(--text2)'; el.style.border = '1px solid var(--border)';
+  } else if (type === 'ok') {
+    el.style.background = 'var(--accent-dim)'; el.style.color = 'var(--accent)'; el.style.border = '1px solid rgba(200,240,96,0.2)';
+  } else {
+    el.style.background = 'var(--red-dim)'; el.style.color = 'var(--red)'; el.style.border = '1px solid rgba(240,112,112,0.2)';
+  }
+  if (type !== 'loading') setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+
+// ─── JSONP helper (bypass CORS for Google Apps Script) ──────────────────────
+function jsonp(url, callbackName) {
+  return new Promise((resolve, reject) => {
+    const cbName = callbackName || ('_cb_' + Date.now());
+    const timeout = setTimeout(() => {
+      delete window[cbName];
+      const s = document.getElementById(cbName);
+      if (s) s.remove();
+      reject(new Error('timeout'));
+    }, 15000);
+    window[cbName] = function(data) {
+      clearTimeout(timeout);
+      delete window[cbName];
+      const s = document.getElementById(cbName);
+      if (s) s.remove();
+      resolve(data);
+    };
+    const script = document.createElement('script');
+    script.id = cbName;
+    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cbName;
+    script.onerror = () => { clearTimeout(timeout); reject(new Error('script error')); };
+    document.head.appendChild(script);
+  });
+}
+
+async function pushToSheet() {
+  const url = getSheetUrl();
+  if (!url) { openSheetSettings(); showSheetStatus('กรุณากรอก Web App URL ก่อน', 'error'); return; }
+  const allData = { wawa: JSON.parse(localStorage.getItem(PERSONS.wawa.storageKey)||'[]'), eve: JSON.parse(localStorage.getItem(PERSONS.eve.storageKey)||'[]') };
+  const totalCount = allData.wawa.length + allData.eve.length;
+  if (!totalCount) { showSyncStatus('ไม่มีข้อมูลที่จะส่ง', 'error'); return; }
+  showSyncStatus('⏳ กำลังส่งข้อมูลไป Google Sheets…', 'loading');
+  document.getElementById('btn-push').disabled = true;
+  try {
+    // Encode data as URL param (JSONP GET — Apps Script จะรับผ่าน e.parameter.data)
+    const encoded = encodeURIComponent(JSON.stringify(allData));
+    const data = await jsonp(url + '?action=push&data=' + encoded);
+    if (data && data.status === 'ok') {
+      showSyncStatus('✓ ส่งข้อมูล Wawa ' + allData.wawa.length + ' / Eve ' + allData.eve.length + ' รายการ เรียบร้อย', 'ok');
+    } else {
+      showSyncStatus('เกิดข้อผิดพลาด: ' + ((data && data.message) || 'unknown'), 'error');
+    }
+  } catch (e) {
+    showSyncStatus('ส่งไม่สำเร็จ: ' + e.message, 'error');
+  }
+  document.getElementById('btn-push').disabled = false;
+}
+
+async function pullFromSheet() {
+  const url = getSheetUrl();
+  if (!url) { openSheetSettings(); showSheetStatus('กรุณากรอก Web App URL ก่อน', 'error'); return; }
+  showSyncStatus('⏳ กำลังโหลดข้อมูลจาก Google Sheets…', 'loading');
+  document.getElementById('btn-pull').disabled = true;
+  try {
+    const data = await jsonp(url + '?action=pull');
+    if (data && data.status === 'ok') {
+      // Support both new format {wawa:[],eve:[]} and old format {entries:[]}
+      let wawaRemote = [], eveRemote = [];
+      if (data.wawa && data.eve) { wawaRemote = data.wawa; eveRemote = data.eve; }
+      else if (Array.isArray(data.entries)) {
+        // old single-person data: load into current person
+        wawaRemote = currentPerson === 'wawa' ? data.entries : [];
+        eveRemote  = currentPerson === 'eve'  ? data.entries : [];
+      }
+      function mergeInto(storageKey, remote) {
+        const local = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        const map = {};
+        local.forEach(e => { map[e.date] = e; });
+        remote.forEach(e => { if (e.date && e.weight) map[e.date] = { date: e.date, weight: parseFloat(e.weight), note: e.note || '' }; });
+        const merged = Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
+        localStorage.setItem(storageKey, JSON.stringify(merged));
+        return merged.length;
+      }
+      const wc = mergeInto(PERSONS.wawa.storageKey, wawaRemote);
+      const ec = mergeInto(PERSONS.eve.storageKey, eveRemote);
+      selectPerson(currentPerson);
+      showSyncStatus('✓ โหลด Wawa ' + wc + ' / Eve ' + ec + ' รายการ เรียบร้อย', 'ok');
+    } else {
+      showSyncStatus('เกิดข้อผิดพลาด: ' + ((data && data.message) || 'ข้อมูลไม่ถูกต้อง'), 'error');
+    }
+  } catch (e) {
+    showSyncStatus('โหลดไม่สำเร็จ: ' + e.message, 'error');
+  }
+  document.getElementById('btn-pull').disabled = false;
+}
+
+init();
+
+</script>
+</body>
+</html>
