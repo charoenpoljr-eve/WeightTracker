@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Weight Tracker — ลดน้ำหนัก 70 → 60 กก.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&family=Noto+Sans+Thai:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --surface2: #F0EDE8;
+    --border: rgba(0,0,0,0.08);
+    --border2: rgba(0,0,0,0.14);
+    --text: #1A1916;
+    --text2: #6B6860;
+    --text3: #9E9C98;
+    --green: #1D9E75;
+    --green-light: #E1F5EE;
+    --green-dark: #0F6E56;
+    --amber: #BA7517;
+    --amber-light: #FAEEDA;
+    --red: #A32D2D;
+    --red-light: #FCEBEB;
+    --blue: #185FA5;
+    --blue-light: #E6F1FB;
+    --blue-dark: #0C447C;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141412;
+      --surface: #1E1D1B;
+      --surface2: #272623;
+      --border: rgba(255,255,255,0.08);
+      --border2: rgba(255,255,255,0.14);
+      --text: #F0EDE8;
+      --text2: #A09D97;
+      --text3: #6B6860;
+      --green: #5DCAA5;
+      --green-light: #04342C;
+      --green-dark: #9FE1CB;
+      --amber: #FAC775;
+      --amber-light: #412402;
+      --red: #F09595;
+      --red-light: #501313;
+      --blue: #85B7EB;
+      --blue-light: #042C53;
+      --blue-dark: #B5D4F4;
+    }
+  }
+
+  body {
+    font-family: 'Sarabun', 'Noto Sans Thai', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 1.25rem 2rem;
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+  }
+  header h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em; }
+  header span { font-size: 0.875rem; color: var(--text2); }
+
+  /* NAV TABS */
+  .nav-tabs {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    padding: 0 2rem;
+    gap: 0;
+  }
+  .nav-tab {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text2);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+    user-select: none;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    font-family: inherit;
+  }
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active { color: var(--green); border-bottom-color: var(--green); }
+
+  .tab-page { display: none; }
+  .tab-page.active { display: block; }
+
+  .container { max-width: 800px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+  }
+  .stat-card .label { font-size: 0.75rem; color: var(--text2); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat-card .value { font-size: 1.75rem; font-weight: 500; letter-spacing: -0.03em; line-height: 1; }
+  .stat-card .unit { font-size: 0.875rem; font-weight: 400; color: var(--text2); }
+  .stat-card.highlight { background: var(--green-light); border-color: transparent; }
+  .stat-card.highlight .value { color: var(--green-dark); }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .card-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1rem;
+  }
+
+  .input-row { display: flex; align-items: center; gap: 12px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .input-row label { font-size: 0.875rem; color: var(--text2); min-width: 60px; }
+
+  input[type="range"] { flex: 1; min-width: 120px; accent-color: var(--green); cursor: pointer; }
+
+  input[type="number"], input[type="date"], textarea, select {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    font-family: inherit;
+    font-size: 0.9375rem;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input[type="number"]:focus, input[type="date"]:focus, textarea:focus, select:focus { border-color: var(--green); }
+  input[type="number"] { width: 80px; text-align: center; }
+  input[type="date"] { width: 160px; }
+  textarea { width: 100%; resize: vertical; min-height: 64px; }
+  select { width: 100%; }
+
+  .progress-wrap { margin-bottom: 1.25rem; }
+  .progress-meta { display: flex; justify-content: space-between; font-size: 0.8125rem; color: var(--text2); margin-bottom: 6px; }
+  .progress-bar-bg { height: 10px; background: var(--surface2); border-radius: 99px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: var(--green); border-radius: 99px; transition: width 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--green); color: #fff; border: none;
+    border-radius: var(--radius-sm); padding: 10px 20px;
+    font-family: inherit; font-size: 0.9375rem; font-weight: 500;
+    cursor: pointer; transition: background 0.15s, transform 0.1s;
+    width: 100%; justify-content: center;
+  }
+  .btn:hover { background: var(--green-dark); }
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--green);
+    border: 1px solid var(--green);
+    border-radius: var(--radius-sm);
+    padding: 8px 16px;
+    font-family: inherit; font-size: 0.875rem; font-weight: 500;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .btn-outline:hover { background: var(--green-light); }
+
+  .btn-sm {
+    background: transparent; color: var(--red);
+    border: 1px solid var(--border2); border-radius: var(--radius-sm);
+    padding: 4px 10px; font-size: 0.75rem; font-family: inherit;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .btn-sm:hover { background: var(--red-light); }
+
+  .chart-wrap { position: relative; width: 100%; height: 220px; }
+
+  .log-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  .log-table th { text-align: left; padding: 8px 12px; font-size: 0.75rem; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border); }
+  .log-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+  .log-table tr:last-child td { border-bottom: none; }
+  .log-table tr:hover td { background: var(--surface2); }
+
+  .badge { display: inline-block; font-size: 0.75rem; padding: 2px 8px; border-radius: 99px; font-weight: 500; }
+  .badge-green { background: var(--green-light); color: var(--green-dark); }
+  .badge-amber { background: var(--amber-light); color: var(--amber); }
+  .badge-red   { background: var(--red-light);   color: var(--red); }
+  .badge-blue  { background: var(--blue-light);  color: var(--blue-dark); }
+
+  .empty-state { text-align: center; padding: 2rem 1rem; color: var(--text3); font-size: 0.875rem; }
+
+  .tip-box { background: var(--green-light); border-radius: var(--radius-sm); padding: 0.75rem 1rem; font-size: 0.8125rem; color: var(--green-dark); margin-top: 1rem; display: none; }
+  .tip-box.visible { display: block; }
+
+  /* AI ADVISOR */
+  .topic-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; margin-bottom: 1rem; }
+  .topic-btn {
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: var(--radius-sm); padding: 0.75rem 1rem;
+    font-family: inherit; font-size: 0.875rem; color: var(--text);
+    cursor: pointer; text-align: left; transition: border-color 0.15s, background 0.15s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .topic-btn:hover { border-color: var(--green); background: var(--green-light); color: var(--green-dark); }
+  .topic-btn.selected { border-color: var(--green); background: var(--green-light); color: var(--green-dark); font-weight: 500; }
+
+  .ai-output {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 1rem 1.25rem;
+    font-size: 0.9375rem;
+    line-height: 1.75;
+    min-height: 80px;
+    white-space: pre-wrap;
+    color: var(--text);
+    display: none;
+  }
+  .ai-output.visible { display: block; }
+  .ai-output.loading { color: var(--text3); font-style: italic; }
+
+  .ai-output strong { font-weight: 600; color: var(--text); }
+
+  .section-label { font-size: 0.8125rem; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+
+  .meal-plan-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
+  .meal-card { background: var(--surface2); border-radius: var(--radius-sm); padding: 0.875rem; }
+  .meal-card .meal-time { font-size: 0.75rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.04em; }
+  .meal-card .meal-name { font-size: 0.9375rem; font-weight: 500; margin: 2px 0 4px; }
+  .meal-card .meal-kcal { font-size: 0.8125rem; color: var(--green-dark); background: var(--green-light); display: inline-block; padding: 1px 8px; border-radius: 99px; }
+
+  .exercise-item { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .exercise-item:last-child { border-bottom: none; }
+  .exercise-icon { font-size: 1.5rem; line-height: 1; min-width: 36px; text-align: center; }
+  .exercise-name { font-weight: 500; font-size: 0.9375rem; }
+  .exercise-detail { font-size: 0.8125rem; color: var(--text2); margin-top: 2px; }
+
+  .food-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+  .food-item { background: var(--surface2); border-radius: var(--radius-sm); padding: 0.75rem; text-align: center; }
+  .food-item .food-emoji { font-size: 1.75rem; display: block; margin-bottom: 4px; }
+  .food-item .food-name { font-size: 0.8125rem; font-weight: 500; }
+  .food-item .food-note { font-size: 0.75rem; color: var(--text3); margin-top: 2px; }
+
+  .api-key-wrap { background: var(--amber-light); border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 1rem; font-size: 0.875rem; color: var(--amber); }
+  .api-key-wrap input { margin-top: 8px; width: 100%; background: var(--surface); color: var(--text); font-family: monospace; font-size: 0.8125rem; }
+
+  footer { text-align: center; padding: 2rem; font-size: 0.75rem; color: var(--text3); }
+
+  @media (max-width: 480px) {
+    header { padding: 1rem; }
+    .nav-tabs { padding: 0 1rem; }
+    .nav-tab { padding: 0.75rem 0.875rem; font-size: 0.8125rem; }
+    .container { padding: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚖️ Weight Tracker</h1>
+  <span>เป้าหมาย 70 → 60 กก.</span>
+</header>
+
+<nav class="nav-tabs">
+  <button class="nav-tab active" onclick="switchTab('tracker')">บันทึกน้ำหนัก</button>
+  <button class="nav-tab" onclick="switchTab('advisor')">AI แนะนำ</button>
+  <button class="nav-tab" onclick="switchTab('food')">อาหารแนะนำ</button>
+  <button class="nav-tab" onclick="switchTab('exercise')">ออกกำลังกาย</button>
+</nav>
+
+<!-- TAB 1: TRACKER -->
+<div id="tab-tracker" class="tab-page active">
+<div class="container">
+  <div class="stats-grid">
+    <div class="stat-card highlight">
+      <div class="label">น้ำหนักล่าสุด</div>
+      <div class="value" id="stat-current">70.0 <span class="unit">กก.</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="label">ลดไปแล้ว</div>
+      <div class="value" id="stat-lost">0.0 <span class="unit">กก.</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="label">เหลืออีก</div>
+      <div class="value" id="stat-left">10.0 <span class="unit">กก.</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="label">บันทึกแล้ว</div>
+      <div class="value" id="stat-days">0 <span class="unit">วัน</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">บันทึกน้ำหนักวันนี้</div>
+    <div class="input-row">
+      <label>วันที่</label>
+      <input type="date" id="entry-date" />
+    </div>
+    <div class="input-row">
+      <label>น้ำหนัก</label>
+      <input type="range" min="55" max="80" step="0.1" value="70" id="weight-slider" oninput="syncWeight('slider')" />
+      <input type="number" id="weight-num" value="70" min="55" max="80" step="0.1" oninput="syncWeight('num')" />
+      <span style="font-size:0.875rem;color:var(--text2)">กก.</span>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-meta">
+        <span>ความคืบหน้า</span>
+        <span id="pct-label">0%</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="prog-fill" style="width:0%"></div>
+      </div>
+    </div>
+    <div class="input-row" style="flex-direction:column;align-items:flex-start;gap:4px;">
+      <label>บันทึกเพิ่มเติม (ไม่บังคับ)</label>
+      <textarea id="entry-note" placeholder="เช่น ออกกำลังกาย 30 นาที, ทานอาหารครบ 3 มื้อ..."></textarea>
+    </div>
+    <button class="btn" onclick="addEntry()">+ บันทึกน้ำหนัก</button>
+    <div class="tip-box" id="tip-box"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">กราฟน้ำหนัก</div>
+    <div class="chart-wrap">
+      <canvas id="weightChart" role="img" aria-label="กราฟแสดงน้ำหนักรายวัน"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">ประวัติการบันทึก</div>
+    <div id="log-container">
+      <div class="empty-state">ยังไม่มีข้อมูล — เริ่มบันทึกน้ำหนักวันแรกของคุณได้เลย!</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- TAB 2: AI ADVISOR -->
+<div id="tab-advisor" class="tab-page">
+<div class="container">
+
+  <div class="card" id="apikey-card">
+    <div class="card-title">ตั้งค่า Gemini API Key</div>
+    <div class="api-key-wrap">
+      <div>ใช้ <strong>Gemini API</strong> — ฟรี ไม่ต้องใส่บัตรเครดิต<br>
+      <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--amber)">รับ API key ฟรีได้ที่ Google AI Studio →</a></div>
+      <input type="password" id="api-key-input" placeholder="AIza..." />
+    </div>
+    <button class="btn" onclick="saveApiKey()">บันทึก API Key</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">ถามที่ปรึกษา AI</div>
+    <p style="font-size:0.875rem;color:var(--text2);margin-bottom:1rem;">เลือกหัวข้อที่อยากรู้ หรือพิมพ์คำถามเอง</p>
+
+    <div class="topic-grid">
+      <button class="topic-btn" onclick="selectTopic(this, 'วางแผนมื้ออาหาร 1 วัน สำหรับคนลดน้ำหนักจาก 70 เป็น 60 กก. แบบละเอียด')">🍽️ วางแผนมื้ออาหาร</button>
+      <button class="topic-btn" onclick="selectTopic(this, 'แนะนำเมนูอาหารไทยที่ดีต่อสุขภาพ แคลอรี่ต่ำ เหมาะกับการลดน้ำหนัก')">🥗 เมนูอาหารไทย</button>
+      <button class="topic-btn" onclick="selectTopic(this, 'อธิบายวิธีนับแคลอรี่เพื่อลดน้ำหนัก ควรกินกี่ แคลอรี่ต่อวัน สำหรับน้ำหนัก 70 กก. อยากลดเหลือ 60 กก.')">🔢 คำนวณแคลอรี่</button>
+      <button class="topic-btn" onclick="selectTopic(this, 'แนะนำแผนออกกำลังกายสำหรับผู้เริ่มต้นลดน้ำหนัก 7 วัน แบบทำที่บ้านได้')">🏃 แผนออกกำลังกาย</button>
+      <button class="topic-btn" onclick="selectTopic(this, 'อาหารอะไรที่ควรเลี่ยงและอาหารอะไรที่ควรกินเพื่อลดน้ำหนักให้ได้ผล')">🚫 อาหารควรเลี่ยง</button>
+      <button class="topic-btn" onclick="selectTopic(this, 'วิธีรับมือกับอาการหิวระหว่างลดน้ำหนัก และเทคนิคควบคุมความอยากกิน')">😤 ควบคุมความหิว</button>
+    </div>
+
+    <div class="input-row" style="flex-direction:column;align-items:flex-start;gap:6px;margin-top:0.5rem;">
+      <label class="section-label">หรือพิมพ์คำถามเอง</label>
+      <textarea id="custom-question" rows="3" placeholder="เช่น กินข้าวเย็นแล้วอยากกินขนมหวาน ทำยังไงดี..."></textarea>
+    </div>
+
+    <button class="btn" onclick="askAI()" id="ask-btn" style="margin-top:0.75rem;">✨ ถาม AI</button>
+
+    <div id="ai-response" class="ai-output" style="margin-top:1rem;"></div>
+  </div>
+</div>
+</div>
+
+<!-- TAB 3: FOOD -->
+<div id="tab-food" class="tab-page">
+<div class="container">
+  <div class="card">
+    <div class="card-title">อาหารแนะนำสำหรับลดน้ำหนัก</div>
+
+    <div style="margin-bottom:1.5rem;">
+      <div class="section-label" style="margin-bottom:10px;">โปรตีนสูง — อิ่มนาน</div>
+      <div class="food-grid">
+        <div class="food-item"><span class="food-emoji">🐟</span><div class="food-name">ปลาทูนึ่ง</div><div class="food-note">~150 kcal / 100g</div></div>
+        <div class="food-item"><span class="food-emoji">🍗</span><div class="food-name">อกไก่ต้ม</div><div class="food-note">~165 kcal / 100g</div></div>
+        <div class="food-item"><span class="food-emoji">🥚</span><div class="food-name">ไข่ต้ม</div><div class="food-note">~77 kcal / ฟอง</div></div>
+        <div class="food-item"><span class="food-emoji">🫘</span><div class="food-name">เต้าหู้แข็ง</div><div class="food-note">~80 kcal / 100g</div></div>
+        <div class="food-item"><span class="food-emoji">🦐</span><div class="food-name">กุ้งต้ม</div><div class="food-note">~99 kcal / 100g</div></div>
+        <div class="food-item"><span class="food-emoji">🥛</span><div class="food-name">นมไขมันต่ำ</div><div class="food-note">~60 kcal / แก้ว</div></div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:1.5rem;">
+      <div class="section-label" style="margin-bottom:10px;">ผักและผลไม้ — แคลอรี่ต่ำ</div>
+      <div class="food-grid">
+        <div class="food-item"><span class="food-emoji">🥦</span><div class="food-name">บร็อคโคลี</div><div class="food-note">~34 kcal / 100g</div></div>
+        <div class="food-item"><span class="food-emoji">🥬</span><div class="food-name">ผักบุ้ง</div><div class="food-note">~20 kcal / 100g</div></div>
+        <div class="food-item"><span class="food-emoji">🍅</span><div class="food-name">มะเขือเทศ</div><div class="food-note">~18 kcal / 100g</div></div>
+        <div class="food-item"><span class="food-emoji">🫑</span><div class="food-name">พริกหวาน</div><div class="food-note">~31 kcal / 100g</div></div>
+        <div class="food-item"><span class="food-emoji">🍎</span><div class="food-name">แอปเปิล</div><div class="food-note">~52 kcal / 100g</div></div>
+        <div class="food-item"><span class="food-emoji">🍓</span><div class="food-name">สตรอว์เบอร์รี</div><div class="food-note">~32 kcal / 100g</div></div>
+        <div class="food-item"><span class="food-emoji">🥒</span><div class="food-name">แตงกวา</div><div class="food-note">~16 kcal / 100g</div></div>
+        <div class="food-item"><span class="food-emoji">🧅</span><div class="food-name">หอมใหญ่</div><div class="food-note">~40 kcal / 100g</div></div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:1.5rem;">
+      <div class="section-label" style="margin-bottom:10px;">คาร์บที่ดี — ไม่น้ำตาลพุ่ง</div>
+      <div class="food-grid">
+        <div class="food-item"><span class="food-emoji">🍠</span><div class="food-name">มันหวาน</div><div class="food-note">~86 kcal / 100g</div></div>
+        <div class="food-item"><span class="food-emoji">🌾</span><div class="food-name">ข้าวกล้อง</div><div class="food-note">~111 kcal / 100g</div></div>
+        <div class="food-item"><span class="food-emoji">🌿</span><div class="food-name">ข้าวโอ๊ต</div><div class="food-note">~68 kcal / 100g</div></div>
+        <div class="food-item"><span class="food-emoji">🫘</span><div class="food-name">ถั่วลันเตา</div><div class="food-note">~81 kcal / 100g</div></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label" style="margin-bottom:10px;">ตัวอย่างมื้ออาหาร 1 วัน (~1,400 kcal)</div>
+      <div class="meal-plan-grid">
+        <div class="meal-card">
+          <div class="meal-time">เช้า</div>
+          <div class="meal-name">ข้าวโอ๊ต + กล้วย + ไข่ต้ม</div>
+          <div class="meal-kcal">~350 kcal</div>
+        </div>
+        <div class="meal-card">
+          <div class="meal-time">กลางวัน</div>
+          <div class="meal-name">ข้าวกล้อง + อกไก่ผัดผัก</div>
+          <div class="meal-kcal">~450 kcal</div>
+        </div>
+        <div class="meal-card">
+          <div class="meal-time">ของว่าง</div>
+          <div class="meal-name">แอปเปิล + นมไขมันต่ำ</div>
+          <div class="meal-kcal">~130 kcal</div>
+        </div>
+        <div class="meal-card">
+          <div class="meal-time">เย็น</div>
+          <div class="meal-name">ต้มจืดเต้าหู้ + ปลานึ่ง + ผัก</div>
+          <div class="meal-kcal">~380 kcal</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">อาหารที่ควรเลี่ยงหรือลดปริมาณ</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;">
+      <div style="background:var(--red-light);border-radius:var(--radius-sm);padding:0.875rem;">
+        <div style="font-weight:600;color:var(--red);margin-bottom:6px;">🚫 เลี่ยงเลย</div>
+        <div style="font-size:0.875rem;color:var(--text2);line-height:2;">น้ำอัดลม · น้ำหวาน<br>ขนมกรุบกรอบ · ฟาสต์ฟู้ด<br>ของทอด · ขนมหวานจัด</div>
+      </div>
+      <div style="background:var(--amber-light);border-radius:var(--radius-sm);padding:0.875rem;">
+        <div style="font-weight:600;color:var(--amber);margin-bottom:6px;">⚠️ ลดปริมาณ</div>
+        <div style="font-size:0.875rem;color:var(--text2);line-height:2;">ข้าวขาว · ขนมปัง<br>แอลกอฮอล์ · น้ำผลไม้กล่อง<br>ซอสและเครื่องปรุงเยอะ</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- TAB 4: EXERCISE -->
+<div id="tab-exercise" class="tab-page">
+<div class="container">
+  <div class="card">
+    <div class="card-title">แผนออกกำลังกาย 7 วัน</div>
+    <p style="font-size:0.875rem;color:var(--text2);margin-bottom:1rem;">เหมาะสำหรับผู้เริ่มต้น ทำที่บ้านได้ เน้นเผาผลาญไขมัน</p>
+
+    <div class="exercise-item">
+      <div class="exercise-icon">🚶</div>
+      <div>
+        <div class="exercise-name">วันจันทร์ — เดินเร็ว / วิ่งเหยาะ</div>
+        <div class="exercise-detail">30 นาที · ~200 kcal · เริ่มต้นง่าย ข้อต่อไม่บาดเจ็บ</div>
+      </div>
+    </div>
+    <div class="exercise-item">
+      <div class="exercise-icon">💪</div>
+      <div>
+        <div class="exercise-name">วันอังคาร — Bodyweight Training</div>
+        <div class="exercise-detail">Squat 3×15, Push-up 3×10, Plank 3×30วิ · ~250 kcal</div>
+      </div>
+    </div>
+    <div class="exercise-item">
+      <div class="exercise-icon">🧘</div>
+      <div>
+        <div class="exercise-name">วันพุธ — โยคะ / Stretching</div>
+        <div class="exercise-detail">30 นาที · ~120 kcal · ฟื้นฟูกล้ามเนื้อ ลดบาดเจ็บ</div>
+      </div>
+    </div>
+    <div class="exercise-item">
+      <div class="exercise-icon">🚴</div>
+      <div>
+        <div class="exercise-name">วันพฤหัส — ปั่นจักรยาน / HIIT</div>
+        <div class="exercise-detail">20 นาที HIIT หรือ 40 นาทีปั่น · ~300 kcal</div>
+      </div>
+    </div>
+    <div class="exercise-item">
+      <div class="exercise-icon">🏋️</div>
+      <div>
+        <div class="exercise-name">วันศุกร์ — Strength Training</div>
+        <div class="exercise-detail">Lunge, Dumbbell Row, Glute Bridge · ~270 kcal</div>
+      </div>
+    </div>
+    <div class="exercise-item">
+      <div class="exercise-icon">🏊</div>
+      <div>
+        <div class="exercise-name">วันเสาร์ — ว่ายน้ำ / Cardio เบาๆ</div>
+        <div class="exercise-detail">30–45 นาที · ~300–400 kcal · ข้อดีไม่กดข้อต่อ</div>
+      </div>
+    </div>
+    <div class="exercise-item">
+      <div class="exercise-icon">😴</div>
+      <div>
+        <div class="exercise-name">วันอาทิตย์ — พักผ่อน</div>
+        <div class="exercise-detail">เดินเบาๆ หรือนอนพัก ร่างกายซ่อมแซมกล้ามเนื้อ</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">เผาผลาญ vs กิจกรรม (คน 70 กก.)</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;">
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:0.875rem;text-align:center;">
+        <div style="font-size:1.5rem;">🚶</div>
+        <div style="font-weight:500;font-size:0.875rem;margin:4px 0;">เดิน 30 นาที</div>
+        <div class="badge badge-green">~150 kcal</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:0.875rem;text-align:center;">
+        <div style="font-size:1.5rem;">🏃</div>
+        <div style="font-weight:500;font-size:0.875rem;margin:4px 0;">วิ่ง 30 นาที</div>
+        <div class="badge badge-green">~300 kcal</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:0.875rem;text-align:center;">
+        <div style="font-size:1.5rem;">🚴</div>
+        <div style="font-weight:500;font-size:0.875rem;margin:4px 0;">ปั่นจักรยาน 30 นาที</div>
+        <div class="badge badge-green">~250 kcal</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:0.875rem;text-align:center;">
+        <div style="font-size:1.5rem;">🏊</div>
+        <div style="font-weight:500;font-size:0.875rem;margin:4px 0;">ว่ายน้ำ 30 นาที</div>
+        <div class="badge badge-green">~280 kcal</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:0.875rem;text-align:center;">
+        <div style="font-size:1.5rem;">💃</div>
+        <div style="font-weight:500;font-size:0.875rem;margin:4px 0;">เต้น Zumba 30 นาที</div>
+        <div class="badge badge-green">~220 kcal</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:0.875rem;text-align:center;">
+        <div style="font-size:1.5rem;">⚡</div>
+        <div style="font-weight:500;font-size:0.875rem;margin:4px 0;">HIIT 20 นาที</div>
+        <div class="badge badge-green">~250 kcal</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">เคล็ดลับสำคัญ</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;gap:10px;align-items:flex-start;"><span style="font-size:1.25rem;">💡</span><div><strong>ขาดดุล 500 kcal/วัน</strong> = ลดได้ราว 0.5 กก./สัปดาห์ ซึ่งเป็นอัตราที่ปลอดภัยและยั่งยืน</div></div>
+      <div style="display:flex;gap:10px;align-items:flex-start;"><span style="font-size:1.25rem;">💧</span><div><strong>ดื่มน้ำก่อนออกกำลังกาย</strong> 30 นาที และระหว่างออกกำลังกายทุก 15–20 นาที</div></div>
+      <div style="display:flex;gap:10px;align-items:flex-start;"><span style="font-size:1.25rem;">🕐</span><div><strong>ออกกำลังกายตอนเช้า</strong> ก่อนอาหาร จะช่วยเผาผลาญไขมันได้มากขึ้น</div></div>
+      <div style="display:flex;gap:10px;align-items:flex-start;"><span style="font-size:1.25rem;">😴</span><div><strong>นอน 7–8 ชั่วโมง</strong> ร่างกายจะหลั่ง Growth Hormone ช่วยเผาผลาญไขมันขณะพัก</div></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<footer>ข้อมูลทั้งหมดเก็บในเครื่องของคุณ (localStorage) · ไม่มีการส่งข้อมูลออกไปไหน</footer>
+
+<script>
+const START = 70, GOAL = 60;
+let entries = JSON.parse(localStorage.getItem('weight_entries') || '[]');
+let chart;
+let selectedQuestion = '';
+
+const TIPS = [
+  '💧 ดื่มน้ำให้ได้ 8 แก้วต่อวัน ช่วยเร่งเผาผลาญ',
+  '🥗 ลองลด carbs มื้อเย็น แทนด้วยผักและโปรตีน',
+  '🚶 เดิน 10,000 ก้าวต่อวัน เผาผลาญได้ราว 300–400 kcal',
+  '😴 นอนหลับ 7–8 ชั่วโมง ฮอร์โมนสมดุล ลดน้ำหนักง่ายขึ้น',
+  '🍽️ กินช้าๆ เคี้ยวให้ละเอียด อิ่มเร็วโดยกินน้อยลง',
+  '🏋️ ออกกำลังกายแบบ strength training เพิ่มกล้ามเนื้อ เผาผลาญพลังงานได้มากขึ้น',
+  '🥑 ไขมันดีจากอะโวคาโด ถั่ว ปลาแซลมอน ช่วยอิ่มนานขึ้น',
+];
+
+function switchTab(id) {
+  document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+function init() {
+  document.getElementById('entry-date').value = new Date().toISOString().slice(0, 10);
+  const savedKey = localStorage.getItem('gemini_api_key');
+  if (savedKey) {
+    document.getElementById('api-key-input').value = savedKey;
+    document.getElementById('apikey-card').style.display = 'none';
+  }
+  renderAll();
+}
+
+function saveApiKey() {
+  const key = document.getElementById('api-key-input').value.trim();
+  if (!key) { alert('กรุณาใส่ API Key'); return; }
+  localStorage.setItem('gemini_api_key', key);
+  document.getElementById('apikey-card').style.display = 'none';
+  alert('บันทึก API Key เรียบร้อย!');
+}
+
+function selectTopic(btn, question) {
+  document.querySelectorAll('.topic-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedQuestion = question;
+  document.getElementById('custom-question').value = '';
+}
+
+async function askAI() {
+  const customQ = document.getElementById('custom-question').value.trim();
+  const question = customQ || selectedQuestion;
+  if (!question) { alert('กรุณาเลือกหัวข้อหรือพิมพ์คำถาม'); return; }
+
+  const apiKey = localStorage.getItem('gemini_api_key');
+  if (!apiKey) {
+    document.getElementById('apikey-card').style.display = 'block';
+    document.getElementById('apikey-card').scrollIntoView({ behavior: 'smooth' });
+    alert('กรุณาใส่ API Key ก่อน');
+    return;
+  }
+
+  const btn = document.getElementById('ask-btn');
+  const output = document.getElementById('ai-response');
+  btn.disabled = true;
+  btn.textContent = '⏳ กำลังถาม AI...';
+  output.classList.add('visible', 'loading');
+  output.textContent = 'กำลังคิดคำตอบ...';
+
+  const latestWeight = entries.length ? entries[entries.length - 1].weight : 70;
+  const systemPrompt = `คุณเป็นที่ปรึกษาสุขภาพและโภชนาการที่เชี่ยวชาญ ตอบเป็นภาษาไทย ให้คำแนะนำที่เป็นรูปธรรม นำไปปฏิบัติได้จริง กระชับ ไม่เยิ่นเย้อ ข้อมูลผู้ใช้: น้ำหนัก ${latestWeight} กก. เป้าหมายลดเหลือ 60 กก. บันทึกมาแล้ว ${entries.length} วัน`;
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ parts: [{ text: question }] }],
+          generationConfig: { maxOutputTokens: 1000 }
+        })
+      }
+    );
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'ไม่มีคำตอบ';
+    output.classList.remove('loading');
+    output.textContent = text;
+  } catch (err) {
+    output.classList.remove('loading');
+    output.textContent = 'เกิดข้อผิดพลาด: ' + err.message + '\n\nกรุณาตรวจสอบ API Key และลองใหม่อีกครั้ง';
+  }
+
+  btn.disabled = false;
+  btn.textContent = '✨ ถาม AI';
+}
+
+function syncWeight(src) {
+  let val;
+  if (src === 'slider') {
+    val = parseFloat(document.getElementById('weight-slider').value);
+    document.getElementById('weight-num').value = val.toFixed(1);
+  } else {
+    val = parseFloat(document.getElementById('weight-num').value);
+    if (isNaN(val)) return;
+    document.getElementById('weight-slider').value = val;
+  }
+  updateProgress(val);
+}
+
+function updateProgress(val) {
+  const lost = Math.max(0, START - val);
+  const pct = Math.min(100, Math.round((lost / (START - GOAL)) * 100));
+  document.getElementById('pct-label').textContent = pct + '%';
+  document.getElementById('prog-fill').style.width = pct + '%';
+}
+
+function addEntry() {
+  const date = document.getElementById('entry-date').value;
+  const weight = parseFloat(document.getElementById('weight-num').value);
+  const note = document.getElementById('entry-note').value.trim();
+  if (!date) { alert('กรุณาเลือกวันที่'); return; }
+  if (isNaN(weight) || weight < 30 || weight > 200) { alert('กรุณากรอกน้ำหนักให้ถูกต้อง'); return; }
+  const existing = entries.findIndex(e => e.date === date);
+  if (existing >= 0) {
+    if (!confirm('มีข้อมูลของวันนี้แล้ว ต้องการแทนที่ไหม?')) return;
+    entries[existing] = { date, weight, note };
+  } else {
+    entries.push({ date, weight, note });
+  }
+  entries.sort((a, b) => a.date.localeCompare(b.date));
+  localStorage.setItem('weight_entries', JSON.stringify(entries));
+  document.getElementById('entry-note').value = '';
+  showTip();
+  renderAll();
+}
+
+function deleteEntry(date) {
+  if (!confirm('ลบรายการวันที่ ' + formatDate(date) + ' ใช่ไหม?')) return;
+  entries = entries.filter(e => e.date !== date);
+  localStorage.setItem('weight_entries', JSON.stringify(entries));
+  renderAll();
+}
+
+function showTip() {
+  const tip = TIPS[Math.floor(Math.random() * TIPS.length)];
+  const el = document.getElementById('tip-box');
+  el.textContent = tip;
+  el.classList.add('visible');
+  setTimeout(() => el.classList.remove('visible'), 6000);
+}
+
+function formatDate(iso) {
+  return new Date(iso + 'T00:00:00').toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+}
+
+function getDelta(i) {
+  if (i === 0) return null;
+  return entries[i].weight - entries[i - 1].weight;
+}
+
+function renderStats() {
+  if (!entries.length) return;
+  const latest = entries[entries.length - 1].weight;
+  document.getElementById('stat-current').innerHTML = latest.toFixed(1) + ' <span class="unit">กก.</span>';
+  document.getElementById('stat-lost').innerHTML = Math.max(0, START - latest).toFixed(1) + ' <span class="unit">กก.</span>';
+  document.getElementById('stat-left').innerHTML = Math.max(0, latest - GOAL).toFixed(1) + ' <span class="unit">กก.</span>';
+  document.getElementById('stat-days').innerHTML = entries.length + ' <span class="unit">วัน</span>';
+  updateProgress(latest);
+  document.getElementById('weight-slider').value = latest;
+  document.getElementById('weight-num').value = latest.toFixed(1);
+}
+
+function renderChart() {
+  const labels = entries.map(e => formatDate(e.date));
+  const data = entries.map(e => e.weight);
+  const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+  const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const textColor = isDark ? '#A09D97' : '#6B6860';
+  if (chart) { chart.data.labels = labels; chart.data.datasets[0].data = data; chart.data.datasets[1].data = entries.map(() => GOAL); chart.update(); return; }
+  chart = new Chart(document.getElementById('weightChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'น้ำหนัก', data, borderColor: '#1D9E75', backgroundColor: 'rgba(29,158,117,0.1)', borderWidth: 2, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#1D9E75', fill: true },
+        { label: 'เป้าหมาย 60 กก.', data: entries.map(() => GOAL), borderColor: '#BA7517', borderDash: [6, 4], borderWidth: 1.5, pointRadius: 0, fill: false }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        y: { min: 58, max: Math.max(72, ...data) + 1, ticks: { callback: v => v + ' กก.', color: textColor, font: { family: 'Sarabun', size: 11 } }, grid: { color: gridColor } },
+        x: { ticks: { color: textColor, font: { family: 'Sarabun', size: 11 }, maxTicksLimit: 10, maxRotation: 30 }, grid: { color: gridColor } }
+      },
+      plugins: {
+        legend: { display: true, labels: { color: textColor, font: { family: 'Sarabun', size: 12 }, usePointStyle: true } },
+        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + ' กก.' } }
+      }
+    }
+  });
+}
+
+function renderLog() {
+  const container = document.getElementById('log-container');
+  if (!entries.length) { container.innerHTML = '<div class="empty-state">ยังไม่มีข้อมูล — เริ่มบันทึกน้ำหนักวันแรกของคุณได้เลย!</div>'; return; }
+  const rows = entries.slice().reverse().map((e, i) => {
+    const origIdx = entries.length - 1 - i;
+    const delta = getDelta(origIdx);
+    let badge = '';
+    if (delta !== null) {
+      if (delta < 0) badge = `<span class="badge badge-green">▼ ${Math.abs(delta).toFixed(1)}</span>`;
+      else if (delta > 0) badge = `<span class="badge badge-red">▲ ${delta.toFixed(1)}</span>`;
+      else badge = `<span class="badge badge-amber">— 0.0</span>`;
+    }
+    return `<tr><td>${formatDate(e.date)}</td><td style="font-weight:500">${e.weight.toFixed(1)} กก.</td><td>${badge}</td><td style="color:var(--text2);font-size:0.8125rem;">${e.note || '—'}</td><td><button class="btn-sm" onclick="deleteEntry('${e.date}')">ลบ</button></td></tr>`;
+  }).join('');
+  container.innerHTML = `<table class="log-table"><thead><tr><th>วันที่</th><th>น้ำหนัก</th><th>เปลี่ยนแปลง</th><th>บันทึก</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function renderAll() { renderStats(); renderChart(); renderLog(); }
+init();
+</script>
+</body>
+</html>
