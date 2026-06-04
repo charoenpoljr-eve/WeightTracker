@@ -304,12 +304,12 @@ footer { text-align:center; padding:2.5rem; font-size:0.6875rem; color:var(--tex
     <div class="tip-box" id="tip-box"></div>
   </div>
   <div class="card">
-    <div class="card-title">กราฟน้ำหนัก — Wawa &amp; Eve</div>
+    <div class="card-title">กราฟน้ำหนัก — Eve &amp; Wawa</div>
     <div class="chart-wrap"><canvas id="weightChart"></canvas></div>
   </div>
   <div class="card">
     <div class="card-header">
-      <div class="card-title" id="log-title">ประวัติการบันทึก — 🌸 Wawa</div>
+      <div class="card-title" id="log-title">ประวัติการบันทึก — Wawa</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         <button class="btn-icon" onclick="openSheetSettings()" title="ตั้งค่า Google Sheets">⚙ Sheet</button>
         <button class="btn-icon" id="btn-push" onclick="pushToSheet()" title="ส่งข้อมูลไป Sheet">↑ ซิงค์ขึ้น</button>
@@ -892,8 +892,8 @@ function renderChart() {
     data: {
       labels,
       datasets: [
-        { label:'🌸 Wawa', data:wawaVals, borderColor:'#e8507a', backgroundColor:'rgba(232,80,122,0.07)', borderWidth:2.5, tension:0.4, pointRadius:4, pointBackgroundColor:'#e8507a', pointBorderColor:'#fff', pointBorderWidth:2, fill:true, spanGaps:false },
-        { label:'🌿 Eve',  data:eveVals,  borderColor:'#4a90d9', backgroundColor:'rgba(74,144,217,0.07)',   borderWidth:2.5, tension:0.4, pointRadius:4, pointBackgroundColor:'#4a90d9', pointBorderColor:'#fff', pointBorderWidth:2, fill:true, spanGaps:false },
+        { label:'Wawa', data:wawaVals, borderColor:'#e8507a', backgroundColor:'rgba(232,80,122,0.07)', borderWidth:2.5, tension:0.4, pointRadius:4, pointBackgroundColor:'#e8507a', pointBorderColor:'#fff', pointBorderWidth:2, fill:true, spanGaps:false },
+        { label:'Eve',  data:eveVals,  borderColor:'#4a90d9', backgroundColor:'rgba(74,144,217,0.07)',   borderWidth:2.5, tension:0.4, pointRadius:4, pointBackgroundColor:'#4a90d9', pointBorderColor:'#fff', pointBorderWidth:2, fill:true, spanGaps:false },
       ]
     },
     options: {
